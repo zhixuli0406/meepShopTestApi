@@ -10,29 +10,15 @@ const { conversationIdParamsSchema, createMessageBodySchema } = require('../vali
 
 exports.getMessagesForConversation = async (ctx) => {
   try {
-    // Validate URL parameters
-    const { error: paramsError, value: paramsValue } = conversationIdParamsSchema.validate(ctx.params, {
-        abortEarly: false,
-        // stripUnknown: true, // Not typically needed for params as they are strictly defined by router
-    });
-    if (paramsError) {
-        paramsError.status = 400;
-        throw paramsError;
-    }
-    const { conversationId } = paramsValue; // Validated conversationId
-
-    // The old manual mongoose.Types.ObjectId.isValid(conversationId) check is now handled by Joi
+    const { conversationId } = await conversationIdParamsSchema.validateAsync(ctx.params);
 
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      const notFoundError = new Error('Conversation not found');
+      const notFoundError = new Error('對話未找到');
       notFoundError.status = 404;
       notFoundError.errorCode = 'CONVERSATION_NOT_FOUND';
       throw notFoundError;
     }
-
-    // TODO: Authorization - Check if the requesting user is part of this conversation
-    // This might involve ctx.state.user if you have user authentication middleware
 
     const messages = await Message.find({ conversationId })
       .populate({
@@ -44,14 +30,16 @@ exports.getMessagesForConversation = async (ctx) => {
     const formattedMessages = messages.map(msg => ({
       id: msg._id,
       conversationId: msg.conversationId,
-      sender: {
+      // System messages will now also have senderId populated (pointing to the user who joined)
+      // Client can use msg.type === 'system' to render it differently.
+      sender: msg.senderId ? { 
         userId: msg.senderId._id,
         user: msg.senderId.username,
         avatar: msg.senderId.avatar
-      },
+      } : null, // Keeping this for robustness, though system messages will have senderId now
       type: msg.type,
       content: msg.content,
-      s3Key: msg.s3Key, // Include s3Key if present
+      s3Key: msg.s3Key,
       timestamp: msg.createdAt.getTime(),
     }));
 
@@ -69,66 +57,73 @@ exports.getMessagesForConversation = async (ctx) => {
 
 exports.createMessageInConversation = async (ctx) => {
   try {
-    // Validate URL parameters first
-    const { error: paramsError, value: paramsValue } = conversationIdParamsSchema.validate(ctx.params, {
-      abortEarly: false,
-    });
-    if (paramsError) {
-      paramsError.status = 400;
-      throw paramsError;
-    }
-    const { conversationId } = paramsValue;
+    const { conversationId } = await conversationIdParamsSchema.validateAsync(ctx.params);
+    const { senderId, type, content, s3Key: validatedS3Key } = await createMessageBodySchema.validateAsync(ctx.request.body);
 
-    // Validate request body
-    const { error: bodyError, value: bodyValue } = createMessageBodySchema.validate(ctx.request.body, {
-      abortEarly: false,
-      stripUnknown: true 
-    });
-    if (bodyError) {
-      bodyError.status = 400;
-      throw bodyError;
-    }
-    // Use validated values from bodyValue
-    const { senderId, type, content, s3Key: validatedS3Key } = bodyValue;
-
-    // Check if conversation exists
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
-      const convNotFoundError = new Error('Conversation not found');
+      const convNotFoundError = new Error('對話未找到');
       convNotFoundError.status = 404;
       convNotFoundError.errorCode = 'CONVERSATION_NOT_FOUND';
       throw convNotFoundError;
     }
 
-    // Check if sender exists
     const sender = await User.findById(senderId);
     if (!sender) {
-      const userNotFoundError = new Error('Sender not found');
+      const userNotFoundError = new Error('發送者未找到');
       userNotFoundError.status = 404;
       userNotFoundError.errorCode = 'USER_NOT_FOUND';
       throw userNotFoundError;
     }
 
-    // Check if sender is a participant in the conversation
-    if (!conversation.participants.map(p => p.toString()).includes(senderId)) {
-      const forbiddenError = new Error('Sender is not a participant in this conversation');
-      forbiddenError.status = 403;
-      forbiddenError.errorCode = 'SENDER_NOT_PARTICIPANT';
-      throw forbiddenError;
+    const senderIsParticipant = conversation.participants.map(p => p.toString()).includes(senderId);
+    if (!senderIsParticipant) {
+      conversation.participants.addToSet(senderId);
+      await conversation.save(); 
+      console.log(`User ${senderId} (${sender.username}) was not a participant and has been added to conversation ${conversationId}`);
+
+      const systemMessageContent = `${sender.username} 已加入對話`;
+      const systemJoinMessage = new Message({
+        conversationId,
+        senderId: sender._id, // Assign the joining user's ID as senderId for the system message
+        type: 'system',
+        content: systemMessageContent,
+      });
+      await systemJoinMessage.save();
+
+      if (ctx.io) {
+        // Populate sender for the system message to send complete sender info via socket
+        await systemJoinMessage.populate({ path: 'senderId', select: 'username avatar _id' });
+
+        const roomName = String(conversationId);
+        const systemMessageForSocket = {
+            id: systemJoinMessage._id,
+            conversationId: systemJoinMessage.conversationId,
+            sender: { // Include sender object for system message as well
+                userId: systemJoinMessage.senderId._id,
+                user: systemJoinMessage.senderId.username,
+                avatar: systemJoinMessage.senderId.avatar
+            },
+            type: systemJoinMessage.type,
+            content: systemJoinMessage.content,
+            timestamp: systemJoinMessage.createdAt.getTime(),
+        };
+        ctx.io.to(roomName).emit('newMessage', systemMessageForSocket);
+        console.log(`System message (user joined) broadcasted to room: ${roomName}`);
+      }
     }
 
     const newMessage = new Message({
       conversationId,
       senderId,
-      type, // Already validated by Joi to be 'text' or 'image'
-      content, // Already validated by Joi based on type
-      s3Key: type === 'text' ? null : validatedS3Key // Ensure s3Key is null for text messages
+      type,
+      content,
+      s3Key: type === 'text' ? null : validatedS3Key
     });
 
     await newMessage.save();
 
     conversation.lastMessage = newMessage._id;
-    conversation.updatedAt = newMessage.createdAt;
     await conversation.save();
 
     await newMessage.populate({ path: 'senderId', select: 'username avatar _id' });
@@ -146,7 +141,6 @@ exports.createMessageInConversation = async (ctx) => {
     if (ctx.io) {
       const roomName = String(conversationId);
       ctx.io.to(roomName).emit('newMessage', messageForResponseAndSocket);
-      console.log(`Message broadcasted to room: ${roomName}`);
     } else {
       console.warn('Socket.IO instance (ctx.io) not available for broadcasting message.');
     }
@@ -155,6 +149,12 @@ exports.createMessageInConversation = async (ctx) => {
     ctx.body = { status: 'success', data: messageForResponseAndSocket };
 
   } catch (error) {
-    throw error;
+    if (error.isJoi) {
+        // Joi errors are already structured, let errorHandler handle them
+        throw error;
+    }
+    // For other errors, log and rethrow for global handler
+    console.error(`Error in createMessageInConversation for ${ctx.params.conversationId || 'unknown'}:`, error);
+    throw error; 
   }
 }; 
