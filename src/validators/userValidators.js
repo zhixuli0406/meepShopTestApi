@@ -1,20 +1,25 @@
 const Joi = require('joi');
 
 const createUserSchema = Joi.object({
-  username: Joi.string().alphanum().min(3).max(30).required()
+  username: Joi.string()
+    .alphanum()
+    .min(3)
+    .max(30)
+    .required()
     .messages({
-      'string.base': 'username should be a type of text',
-      'string.empty': 'username cannot be an empty field',
-      'string.alphanum': 'username should only contain alpha-numeric characters',
-      'string.min': 'username should have a minimum length of {#limit} characters',
-      'string.max': 'username should have a maximum length of {#limit} characters',
-      'any.required': 'username is a required field'
+      'string.base': '使用者名稱必須是字串',
+      'string.alphanum': '使用者名稱只能包含英數字元',
+      'string.min': '使用者名稱長度至少需要 {#limit} 個字元',
+      'string.max': '使用者名稱長度不能超過 {#limit} 個字元',
+      'any.required': '使用者名稱為必填欄位'
     }),
-  avatar: Joi.string().uri({
-    scheme: ['http', 'https']
-  }).allow('', null).optional() // Allow empty string or null, and make it optional
+  avatar: Joi.string()
+    .uri()
+    .optional()
+    .allow('') // Allow empty string for avatar if user doesn't provide one
     .messages({
-      'string.uri': 'avatar must be a valid URI (http or https)'
+      'string.base': '頭像必須是字串',
+      'string.uri': '頭像必須是有效的 URI'
     })
 });
 
