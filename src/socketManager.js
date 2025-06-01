@@ -1,6 +1,6 @@
 // This module will handle Socket.IO server-side logic
-const User = require('../models/user'); // Assuming you might need User model for auth checks
-const Conversation = require('../models/conversation'); // For participant checks
+const User = require('./models/user'); // Corrected path
+const Conversation = require('./models/conversation'); // Corrected path
 
 // Placeholder for now. We will define event handlers here.
 // e.g., on connection, on disconnect, custom events like 'joinConversation', 'sendMessage'
