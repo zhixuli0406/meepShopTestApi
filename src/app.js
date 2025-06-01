@@ -10,6 +10,8 @@ const uploadRoutes = require('./api/uploadRoutes');
 
 const app = new Koa();
 
+app.proxy = true; // <<<<<<<<<< 新增此行
+
 // Apply error handler middleware AT THE TOP
 app.use(errorHandler);
 
