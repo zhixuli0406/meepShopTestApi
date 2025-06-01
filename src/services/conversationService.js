@@ -29,31 +29,46 @@ const getConversationParticipants = async (conversationId) => {
 };
 
 const addParticipantToConversation = async (conversationId, userId, username, avatar) => {
+    console.log(`[ConvService] Attempting to add/ensure participant ${userId} (${username || 'N/A'}) in conversation ${conversationId}`);
     try {
         const conversation = await Conversation.findById(conversationId);
+
         if (!conversation) {
-            console.warn(`[ConvService] addParticipantToConversation: Conversation ${conversationId} not found.`);
-            return false;
+            console.warn(`[ConvService] addParticipantToConversation: Conversation not found for ID: ${conversationId}`);
+            return false; // Indicate failure: conversation not found
         }
 
-        // Check if user is already a participant
-        const isAlreadyParticipant = conversation.participants.some(pId => pId.toString() === userId);
-        if (isAlreadyParticipant) {
-            console.log(`[ConvService] User ${userId} is already a participant in conversation ${conversationId}.`);
-            return false; // Not an error, but no change made
-        }
+        // Use $addToSet to add the userId to the participants array if it's not already present.
+        // $addToSet returns the modified document if successful or the original if no change was needed (already present).
+        const updateResult = await Conversation.updateOne(
+            { _id: conversationId },
+            { $addToSet: { participants: userId } }
+        );
 
-        // Add new participant
-        conversation.participants.push(userId); // Assuming userId is a valid ObjectId string or ObjectId
-        await conversation.save();
-        console.log(`[ConvService] User ${userId} (${username}) added to conversation ${conversationId}.`);
-        return true;
+        if (updateResult.modifiedCount > 0) {
+            console.log(`[ConvService] User ${userId} (${username || 'N/A'}) successfully added to conversation ${conversationId} participants array.`);
+            return true; // Successfully added
+        } else if (updateResult.matchedCount > 0 && updateResult.modifiedCount === 0) {
+            // This means the conversation was found, but the user was already in the participants array (no modification needed by $addToSet)
+            console.log(`[ConvService] User ${userId} (${username || 'N/A'}) was already a participant in conversation ${conversationId}. No change made by $addToSet.`);
+            return true; // Still considered a success in terms of the user being a participant
+        } else if (updateResult.matchedCount === 0) {
+            // This case should ideally be caught by the initial findById, but as a safeguard for updateOne:
+            console.warn(`[ConvService] addParticipantToConversation: Conversation not found for ID: ${conversationId} during updateOne.`);
+            return false; // Conversation not found during update
+        }
+        
+        // Fallback for unexpected updateResult scenarios, though less likely with $addToSet logic above.
+        console.warn(`[ConvService] addParticipantToConversation: User ${userId} (${username || 'N/A'}) may not have been added to conversation ${conversationId}. UpdateResult:`, updateResult);
+        return false;
+
     } catch (error) {
-        console.error(`[ConvService] Error adding participant ${userId} to conversation ${conversationId}:`, error);
+        console.error(`[ConvService] Error in addParticipantToConversation for conv ${conversationId}, user ${userId}:`, error);
+        // Re-throw the error or return false depending on how you want to handle it upstream
+        // For now, returning false to indicate failure at the service level.
         return false;
     }
 };
-
 
 const createSystemMessage = async (conversationId, content) => {
     try {
