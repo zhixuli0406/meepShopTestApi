@@ -1,39 +1,41 @@
 // This module will handle Socket.IO server-side logic
 const User = require('./models/user'); // Corrected path
 const Conversation = require('./models/conversation'); // Corrected path
+const { Server } = require('socket.io');
 
 // Placeholder for now. We will define event handlers here.
 // e.g., on connection, on disconnect, custom events like 'joinConversation', 'sendMessage'
 
-function initializeSocketIO(io) {
-    // Socket.IO Middleware for authentication (example)
-    // This middleware runs for every incoming connection
+const setupSocketIO = (httpServer) => {
+    const io = new Server(httpServer, {
+        cors: {
+            origin: "*", // Adjust for production
+            methods: ["GET", "POST"],
+        },
+    });
+
+    // Authentication middleware
     io.use(async (socket, next) => {
-        const token = socket.handshake.auth.token; // Client should send token in auth object
-        // const { token } = socket.handshake.query; // Or via query param (less secure for tokens)
+        console.log('Socket connection attempt. Handshake query:', socket.handshake.query); // Log the entire query object
+        console.log('Socket connection attempt. Handshake auth:', socket.handshake.auth);   // Log the auth object
+
+        const tokenFromQuery = socket.handshake.query.token;
+        const tokenFromAuth = socket.handshake.auth.token; // Keep checking auth as well, some versions might populate it
+
+        let token = tokenFromQuery || tokenFromAuth; // Prioritize token from query for this test
+
         if (token) {
-            // TODO: Implement your actual token verification logic here
-            // For example, verify a JWT token and get the user ID
-            // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            // const user = await User.findById(decoded.id);
-            // if (!user) {
-            //     return next(new Error('Authentication error: User not found'));
-            // }
-            // socket.userId = user._id.toString(); // Attach userId to the socket object
-            // socket.username = user.username;
-            console.log(`Socket ${socket.id} trying to authenticate with token.`);
-            // For this example, let's assume a placeholder userId if token is present
-            if (token === 'valid-token-for-testing') { // Replace with real validation
-                socket.userId = 'mockUserId-' + socket.id.substring(0,5); // Example user ID
-                socket.username = 'MockUser-' + socket.id.substring(0,5);
-                console.log(`Socket ${socket.id} authenticated as ${socket.username} (${socket.userId})`);
+            console.log(`Token received: ${token}`);
+            if (token === 'valid-token-for-testing' || (await isValidToken(token))) { // Assuming isValidToken is your actual validation logic
+                console.log(`Authentication successful for socket ID: ${socket.id}`);
+                socket.userId = await getUserIdFromToken(token); // Example: Store userId on socket
                 return next();
             } else {
-                console.log(`Socket ${socket.id} authentication failed: Invalid token.`);
+                console.log(`Authentication failed: Invalid token for socket ID: ${socket.id}`);
                 return next(new Error('Authentication error: Invalid token'));
             }
         } else {
-            console.log(`Socket ${socket.id} connection attempt without authentication token.`);
+            console.log(`Authentication failed: No token provided for socket ID: ${socket.id}`);
             return next(new Error('Authentication error: No token provided'));
         }
     });
@@ -133,6 +135,26 @@ function initializeSocketIO(io) {
         // The broadcast of 'newMessage' is triggered by the server after successful DB save in messageController.
 
     });
+
+    return io;
+};
+
+// Dummy/placeholder functions for isValidToken and getUserIdFromToken
+// Replace these with your actual token validation logic
+async function isValidToken(token) {
+    // In a real app, you'd validate this against your auth system (e.g., decode JWT, check session)
+    if (token === 'valid-token-for-testing') return true; // For our hardcoded test
+    // Replace with actual validation logic
+    console.warn(`isValidToken: Actual token validation not implemented. Token received: ${token}`);
+    return false; // Default to false if not the test token and no real validation
 }
 
-module.exports = initializeSocketIO; 
+async function getUserIdFromToken(token) {
+    // In a real app, extract user ID from the validated token
+    if (token === 'valid-token-for-testing') return 'test-user-id-from-valid-token'; // Example
+    // Replace with actual user ID extraction logic
+    console.warn(`getUserIdFromToken: Actual user ID extraction not implemented. Token received: ${token}`);
+    return null;
+}
+
+module.exports = setupSocketIO; 
