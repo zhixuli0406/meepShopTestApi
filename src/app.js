@@ -5,8 +5,8 @@ const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
 const errorHandler = require('./middlewares/errorHandler'); // << REQUIRE errorHandler
 // We will add routes here later
-const userRoutes = require('./api/userRoutes');
-const conversationRoutes = require('./api/conversationRoutes');
+const userRoutes = require('./api/userRoutes'); // << REQUIRE userRoutes
+const conversationRoutes = require('./api/conversationRoutes'); // << REQUIRE conversationRoutes
 const messageRoutes = require('./api/messageRoutes');
 const uploadRoutes = require('./api/uploadRoutes');
 
@@ -45,14 +45,16 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === '/') {
         console.log('[TEMP APP LOG] Handling GET /');
-        ctx.body = 'Hello from Koa root! (Step 3)';
+        ctx.body = 'Hello from Koa root! (Step 4.2 - conversationRoutes restored)';
         return; 
     }
     await next(); // Important to call await next() if not handled, so errorHandler can catch 404
 });
 
-// API Routes - to be uncommented and implemented later
+// Restore API Routes (userRoutes first)
 app.use(userRoutes.routes()).use(userRoutes.allowedMethods());
+
+// API Routes - to be uncommented and implemented later
 app.use(conversationRoutes.routes()).use(conversationRoutes.allowedMethods());
 app.use(messageRoutes.routes()).use(messageRoutes.allowedMethods());
 app.use(uploadRoutes.routes()).use(uploadRoutes.allowedMethods());
