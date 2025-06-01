@@ -1,3 +1,5 @@
+console.log("<<<<< EXECUTING SIMPLIFIED src/app.js - VERSION " + Date.now() + " >>>>>");
+// src/app.js (Temporary Simplification)
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
