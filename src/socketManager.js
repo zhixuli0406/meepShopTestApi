@@ -5,23 +5,23 @@
 
 function initializeSocketIO(io) {
     io.on('connection', (socket) => {
-        console.log(`Socket connected: ${socket.id}`);
+        console.log(`Socket connected: ${socket.id} - Test minimal`);
 
         // Handle a user joining a conversation room
-        socket.on('joinConversation', (conversationId) => {
-            if (conversationId) { // Basic validation
-                socket.join(conversationId);
-                console.log(`Socket ${socket.id} joined conversation room: ${conversationId}`);
-                // Optional: Emit a confirmation back to the joining client
-                // socket.emit('joinedConversation', { conversationId, status: 'success' });
-                // Optional: Notify others in the room (e.g., for 'user has joined' system message - though this might be better via API)
-                // socket.to(conversationId).emit('userJoined', { userId: socket.id /* or actual userId if authenticated */, conversationId });
-            } else {
-                console.warn(`Socket ${socket.id} tried to join a conversation with an invalid ID.`);
-                // Optional: Emit an error back to the client
-                // socket.emit('joinConversationError', { message: 'Invalid conversation ID' });
-            }
-        });
+        // socket.on('joinConversation', (conversationId) => {
+        //     if (conversationId) { // Basic validation
+        //         socket.join(conversationId);
+        //         console.log(`Socket ${socket.id} joined conversation room: ${conversationId}`);
+        //         // Optional: Emit a confirmation back to the joining client
+        //         // socket.emit('joinedConversation', { conversationId, status: 'success' });
+        //         // Optional: Notify others in the room (e.g., for 'user has joined' system message - though this might be better via API)
+        //         // socket.to(conversationId).emit('userJoined', { userId: socket.id /* or actual userId if authenticated */, conversationId });
+        //     } else {
+        //         console.warn(`Socket ${socket.id} tried to join a conversation with an invalid ID.`);
+        //         // Optional: Emit an error back to the client
+        //         // socket.emit('joinConversationError', { message: 'Invalid conversation ID' });
+        //     }
+        // });
 
         // Client-initiated 'sendMessage' is removed as message creation is via HTTP API.
         // The broadcast of new messages will be triggered by the server after successful DB save.
@@ -44,16 +44,16 @@ function initializeSocketIO(io) {
         */
 
         // Handle a user explicitly leaving a conversation room (optional but good practice)
-        socket.on('leaveConversation', (conversationId) => {
-            if (conversationId) {
-                socket.leave(conversationId);
-                console.log(`Socket ${socket.id} left conversation room: ${conversationId}`);
-                // Optional: Emit a confirmation
-                // socket.emit('leftConversation', { conversationId, status: 'success' });
-            }
-        });
+        // socket.on('leaveConversation', (conversationId) => {
+        //     if (conversationId) {
+        //         socket.leave(conversationId);
+        //         console.log(`Socket ${socket.id} left conversation room: ${conversationId}`);
+        //         // Optional: Emit a confirmation
+        //         // socket.emit('leftConversation', { conversationId, status: 'success' });
+        //     }
+        // });
 
-        socket.on('disconnecting', () => {
+        // socket.on('disconnecting', () => {
             // When a socket is disconnecting, its rooms are available in socket.rooms
             // We can iterate over these rooms and perform cleanup or notify others.
             // The default room is the socket's own ID.
@@ -63,11 +63,10 @@ function initializeSocketIO(io) {
             //         // socket.to(room).emit('userLeft', { userId: socket.id, conversationId: room });
             //     }
             // }
-        });
+        // });
 
         socket.on('disconnect', () => {
-            console.log(`Socket disconnected: ${socket.id}`);
-            // General cleanup if any state was associated with the socket directly (outside of rooms)
+            console.log(`Socket disconnected: ${socket.id} - Test minimal`);
         });
 
         // TODO: Add authentication for sockets if needed
