@@ -32,26 +32,19 @@ const startServer = async () => {
         console.log("Database connected."); // Log 5
 
         // Create HTTP server from Koa app
-        const httpServer = http.createServer(app.callback());
+        const server = http.createServer(app.callback());
         console.log("HTTP server created."); // Log 6
 
         // Initialize Socket.IO
-        const io = new Server(httpServer, {
-            cors: {
-                origin: process.env.CLIENT_URL || "http://localhost:3000", // Restore to env variable or a sensible default
-                methods: ["GET", "POST"]
-            }
-        });
+        const io = initializeSocketIO(server);
         console.log("Socket.IO server instance created."); // Log 7
-        initializeSocketIO(io); // Setup Socket.IO event handlers
-        console.log("initializeSocketIO called."); // Log 8
 
         // Make io instance available in Koa context (ctx.io)
         app.context.io = io;
 
-        httpServer.listen(PORT, () => {
-            console.log(`HTTP Server running on port ${PORT}`); // Log 9
-            console.log(`WebSocket Server initialized and listening on port ${PORT}`); // Log 10
+        server.listen(PORT, () => {
+            console.log(`[ServerJS] HTTP server listening on port ${PORT}`); // Log 8
+            console.log(`WebSocket Server initialized and listening on port ${PORT}`); // Log 9
         });
 
         // Perform initial data load if necessary
