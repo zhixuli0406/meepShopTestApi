@@ -7,7 +7,7 @@ const errorHandler = require('./middlewares/errorHandler'); // << REQUIRE errorH
 // We will add routes here later
 const userRoutes = require('./api/userRoutes'); // << REQUIRE userRoutes
 const conversationRoutes = require('./api/conversationRoutes'); // << REQUIRE conversationRoutes
-const messageRoutes = require('./api/messageRoutes');
+const messageRoutes = require('./api/messageRoutes'); // << REQUIRE messageRoutes
 const uploadRoutes = require('./api/uploadRoutes');
 
 const app = new Koa();
@@ -45,10 +45,10 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === '/') {
         console.log('[TEMP APP LOG] Handling GET /');
-        ctx.body = 'Hello from Koa root! (Step 4.2 - conversationRoutes restored)';
+        ctx.body = 'Hello from Koa root! (Step 4.3 - messageRoutes restored)';
         return; 
     }
-    await next(); // Important to call await next() if not handled, so errorHandler can catch 404
+    await next();
 });
 
 // Restore API Routes (userRoutes first)
