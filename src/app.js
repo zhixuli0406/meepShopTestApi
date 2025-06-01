@@ -1,9 +1,9 @@
 console.log("<<<<< EXECUTING SIMPLIFIED src/app.js - VERSION " + Date.now() + " >>>>>");
-// src/app.js (Step 2 Complete)
+// src/app.js (Step 3 Attempt: Restore errorHandler)
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
-const errorHandler = require('./middlewares/errorHandler'); // Import the error handler
+const errorHandler = require('./middlewares/errorHandler'); // << REQUIRE errorHandler
 // We will add routes here later
 const userRoutes = require('./api/userRoutes');
 const conversationRoutes = require('./api/conversationRoutes');
@@ -14,19 +14,30 @@ const app = new Koa();
 
 app.proxy = true;
 
-// Restore bodyParser and cors here, before the temp logger
-app.use(cors());
-app.use(bodyParser());
+// Restore errorHandler AT THE TOP
+app.use(errorHandler); // << USE errorHandler
+
+// Middlewares (bodyParser and cors after errorHandler, before the temp logger)
+app.use(cors()); 
+app.use(bodyParser()); 
 
 // Middleware to log every request (our temporary logger)
 app.use(async (ctx, next) => {
     console.log(`[TEMP APP LOG] Request received: ${ctx.method} ${ctx.url}`);
     try {
         await next();
+        // If errorHandler handles 404 properly, this log might show 404 if no route matches
+        // If GET / matches, it should still show 200
         console.log(`[TEMP APP LOG] Request finished for: ${ctx.method} ${ctx.url} with status ${ctx.status}`);
     } catch (err) {
-        console.error(`[TEMP APP LOG] Error in request pipeline for ${ctx.method} ${ctx.url}:`, err.stack || err);
-        throw err; // Re-throw for centralized error handlers
+        // If errorHandler is working, errors should be caught by it, 
+        // so this catch block in temp logger might not be hit as often, 
+        // unless errorHandler itself throws or re-throws an unhandled error.
+        console.error(`[TEMP APP LOG] Error in request pipeline (after errorHandler should have run):`, err.stack || err);
+        // We don't re-throw here if errorHandler is supposed to be the final catcher
+        // However, if errorHandler is NOT the final catcher or fails, app.on('error') should still catch it.
+        // For safety during this test, let's re-throw so app.on('error') can see it if errorHandler fails silently.
+        throw err; 
     }
 });
 
@@ -34,10 +45,10 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === '/') {
         console.log('[TEMP APP LOG] Handling GET /');
-        ctx.body = 'Hello from Koa root! (Step 2)';
+        ctx.body = 'Hello from Koa root! (Step 3)';
         return; 
     }
-    await next();
+    await next(); // Important to call await next() if not handled, so errorHandler can catch 404
 });
 
 // API Routes - to be uncommented and implemented later
