@@ -1,3 +1,16 @@
+process.on('uncaughtException', (error, origin) => {
+    console.error('<<<<< UNCAUGHT EXCEPTION >>>>>');
+    console.error('Exception origin:', origin);
+    console.error(error);
+    // process.exit(1); // Consider exiting in production, but for debug, log and continue might be useful
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('<<<<< UNHANDLED REJECTION >>>>>');
+    console.error('Reason:', reason);
+    // console.error('Promise:', promise);
+});
+
 console.log("Application starting..."); // Log 1
 require('dotenv').config(); // Load environment variables at the very beginning
 console.log("dotenv configured."); // Log 2
