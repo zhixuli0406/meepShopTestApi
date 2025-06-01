@@ -1,4 +1,3 @@
-console.log("<<<<< EXECUTING SIMPLIFIED src/app.js - VERSION " + Date.now() + " >>>>>");
 // src/app.js (Final Version for now)
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
