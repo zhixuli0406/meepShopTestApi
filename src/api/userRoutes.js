@@ -1,13 +1,16 @@
 const Router = require('koa-router');
 const userController = require('../controllers/userController');
 
-const router = new Router();
+const router = new Router({ prefix: '/users' });
 
-// Define user routes
-router.post('/users', userController.createUser);
+// POST /users - Create a new user
+router.post('/', userController.createUser);
 
-// Future user routes can be added here, e.g.:
-// router.get('/users', userController.getAllUsers);
-// router.get('/users/:userId', userController.getUserById);
+// PUT /users/:userId/avatar - Update user avatar
+router.put('/:userId/avatar', userController.updateUserAvatar);
+
+// TODO: Add more user-related routes here if needed
+// e.g., GET /users/:userId - Get user profile
+// e.g., PUT /users/:userId - Update user profile (other fields)
 
 module.exports = router; 

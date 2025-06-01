@@ -220,6 +220,40 @@ npm start
         }
         ```
 
+#### `PUT /users/:userId/avatar` (更新使用者頭像)
+
+更新特定使用者的頭像。此流程通常涉及前端先透過 `POST /uploads/generate-signed-url` 取得預簽名 URL 並將圖片上傳至 S3，然後使用此端點將 S3 URL 和金鑰與使用者關聯。
+
+-   **方法：** `PUT`
+-   **端點：** `/users/:userId/avatar`
+-   **URL 參數：**
+    -   `userId` (字串, 有效的 MongoDB ObjectId, 必填)
+-   **請求主體 (Request Body)：**
+    ```json
+    {
+      "avatarUrl": "字串 (圖片在 S3 上的公開 URL, 必填)",
+      "s3Key": "字串 (圖片在 S3 上的物件金鑰, 必填)"
+    }
+    ```
+-   **成功回應：** `200 OK`
+    ```json
+    {
+      "status": "success",
+      "message": "使用者頭像更新成功。",
+      "data": {
+        "_id": "使用者ID",
+        "username": "使用者名稱",
+        "avatar": "新的頭像 URL",
+        "avatarS3Key": "新的 S3 物件金鑰",
+        "createdAt": "時間戳記"
+      }
+    }
+    ```
+-   **錯誤回應：**
+    -   `400 Bad Request`: `userId` 或請求主體驗證錯誤。 `errorCode: VALIDATION_ERROR`。
+    -   `404 Not Found`: 找不到使用者。 `errorCode: USER_NOT_FOUND`。
+    -   `500 Internal Server Error`: S3 操作失敗 (例如：刪除舊頭像失敗，但此錯誤可能不會阻止頭像資訊更新，具體取決於錯誤處理策略)。
+
 ### 對話管理
 
 #### `POST /conversations` (建立對話)
