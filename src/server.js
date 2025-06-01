@@ -38,7 +38,7 @@ const startServer = async () => {
         // Initialize Socket.IO
         const io = new Server(httpServer, {
             cors: {
-                origin: "*", // Force allow all origins for testing
+                origin: process.env.CLIENT_URL || "http://localhost:3000", // Restore to env variable or a sensible default
                 methods: ["GET", "POST"]
             }
         });
