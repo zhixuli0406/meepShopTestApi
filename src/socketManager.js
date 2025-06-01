@@ -33,13 +33,17 @@ async function getAuthenticatedUserFromToken(token) {
         // const user = await User.findById(decoded.id).lean();
         // return user ? { userId: user._id.toString(), username: user.username, avatar: user.avatar } : null;
         
-        // For testing with 'valid-token-for-testing'
+        // FOR TESTING: Replace 'YOUR_REAL_OBJECT_ID_STRING_HERE' 
+        // with an actual _id (as a string) from a user in your database.
+        // If you don't have one readily available, you can use a placeholder like '000000000000000000000000' 
+        // but the DB operations in conversationService might still fail if that user doesn't exist.
+        // The BEST approach for this mock is to use an ID of a user that genuinely exists in your DB.
         const mockUser = { 
-            userId: 'test-user-id-from-valid-token', 
-            username: 'TestUserFromToken',
-            avatar: 'https://i.pravatar.cc/150?u=test-user-id-from-valid-token' 
+            userId: '60c72b2f9b1d8e001c8e4abc', // <<< IMPORTANT: REPLACE THIS with a REAL User ObjectId string from your DB
+            username: 'MockTestUserWithRealObjectId',
+            avatar: 'https://i.pravatar.cc/150?u=mockrealid' 
         };
-        console.log('[AuthService] Mock user retrieved for test token:', mockUser);
+        console.log('[AuthService] Mock user (intended to have DB-valid ObjectId) retrieved for test token:', mockUser);
         return mockUser;
     }
     console.warn(`[AuthService] getAuthenticatedUserFromToken: No real user retrieval from token implemented. Token: ${token}`);
