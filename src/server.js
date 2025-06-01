@@ -25,7 +25,7 @@ const startServer = async () => {
         // Initialize Socket.IO
         const io = new Server(httpServer, {
             cors: {
-                origin: process.env.CLIENT_URL || "*", // Configure allowed origins
+                origin: "*", // Force allow all origins for testing
                 methods: ["GET", "POST"]
             }
         });
