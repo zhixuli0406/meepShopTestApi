@@ -1,4 +1,6 @@
 // This module will handle Socket.IO server-side logic
+
+console.log('[SocketManager_TOP] socketManager.js execution started. Timestamp:', new Date().toISOString()); 
 const User = require('./models/user'); 
 const Conversation = require('./models/conversation');
 const { Server } = require('socket.io');
