@@ -25,6 +25,12 @@ app.use(conversationRoutes.routes()).use(conversationRoutes.allowedMethods());
 app.use(messageRoutes.routes()).use(messageRoutes.allowedMethods());
 app.use(uploadRoutes.routes()).use(uploadRoutes.allowedMethods());
 
+// In src/app.js, after errorHandler
+app.use(async (ctx, next) => {
+  console.log(`[RequestLogger] Path: ${ctx.path}, Method: ${ctx.method}`);
+  await next();
+});
+
 // Your detailed app.on('error') logger
 app.on('error', (err, ctx) => {
     console.error('KOA APP ERROR --- START');
