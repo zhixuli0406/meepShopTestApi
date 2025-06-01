@@ -5,33 +5,41 @@ const messageSchema = new Schema({
   conversationId: {
     type: Schema.Types.ObjectId,
     ref: 'Conversation',
-    required: true
+    required: true,
+    index: true
   },
   senderId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
   },
   type: {
     type: String,
-    enum: ['text', 'image', 'system'], // Added 'system' based on chat_data.json
+    enum: ['text', 'image', 'system'],
     required: true
   },
   content: {
     type: String,
-    required: true
+    required: function() { return this.type === 'text' || this.type === 'system'; }
   },
   s3Key: {
-    type: String // Optional: for image type messages, storing the S3 object key
+    type: String,
+    required: function() { return this.type === 'image'; }
   },
-  // reactions: { type: Schema.Types.Mixed } // As seen in chat_data.json, could be a future enhancement
   createdAt: {
     type: Date,
     default: Date.now
   }
 }, {
-  timestamps: { createdAt: true, updatedAt: false } // Only manage createdAt
+  timestamps: { createdAt: true, updatedAt: false }
 });
+
+messageSchema.path('senderId').validate(function(value) {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  return mongoose.Types.ObjectId.isValid(value);
+}, 'Invalid senderId: must be a valid ObjectId if provided.');
 
 const Message = mongoose.model('Message', messageSchema);
 
