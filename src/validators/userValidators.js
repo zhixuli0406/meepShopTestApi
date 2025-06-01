@@ -23,36 +23,31 @@ const createUserSchema = Joi.object({
     })
 });
 
-// Schema for validating userId in URL parameters
+// Schema for validating MongoDB ObjectId in URL params (e.g., /:userId)
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 const userIdParamsSchema = Joi.object({
-  userId: Joi.string().alphanum().length(24).required() // Basic MongoDB ObjectId check
-    .messages({
-      'string.base': 'User ID must be a string',
-      'string.alphanum': 'User ID must be an alphanumeric string',
-      'string.length': 'User ID must be 24 characters long',
-      'any.required': 'User ID is required in URL parameters'
-    })
+  userId: Joi.string().pattern(objectIdRegex).required().messages({
+    'string.base': '使用者 ID 必須是字串',
+    'string.pattern.base': '使用者 ID 必須是有效的 MongoDB ObjectId',
+    'any.required': '使用者 ID 為必填參數'
+  })
 });
 
-// Schema for validating the request body of updating user avatar
+// Schema for PUT /users/:userId/avatar request body
 const updateUserAvatarBodySchema = Joi.object({
-  avatarUrl: Joi.string().uri({ scheme: ['http', 'https'] }).required()
-    .messages({
-      'string.base': 'Avatar URL must be a string',
-      'string.uri': 'Avatar URL must be a valid URI (http or https)',
-      'any.required': 'Avatar URL is required'
-    }),
-  s3Key: Joi.string().trim().min(1).required()
-    .messages({
-      'string.base': 'S3 key must be a string',
-      'string.empty': 'S3 key cannot be empty',
-      'string.min': 'S3 key cannot be empty',
-      'any.required': 'S3 key is required'
-    })
+  avatarUrl: Joi.string().uri().required().messages({
+    'string.base': '頭像 URL 必須是字串',
+    'string.uri': '頭像 URL 必須是有效的 URI',
+    'any.required': '頭像 URL 為必填欄位'
+  }),
+  s3Key: Joi.string().required().messages({
+    'string.base': 'S3 金鑰必須是字串',
+    'any.required': 'S3 金鑰為必填欄位'
+  })
 });
 
 module.exports = {
   createUserSchema,
-  userIdParamsSchema, // Export the new schema
-  updateUserAvatarBodySchema // Export the new schema
+  userIdParamsSchema,
+  updateUserAvatarBodySchema
 }; 
