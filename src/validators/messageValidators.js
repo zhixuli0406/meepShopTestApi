@@ -41,15 +41,18 @@ const createMessageBodySchema = Joi.object({
     'string.uri': 'Image message content must be a valid URL (http or https)',
     'any.required': 'Message content is required' 
   }),
-  s3Key: Joi.string().allow(null, '').optional()
+  s3Key: Joi.string().allow(null, '')
     .when('type', {
         is: 'image',
-        // then: Joi.string().required(), // Can make s3Key mandatory for images if needed
-        // otherwise: Joi.forbidden() // s3Key should not be present for text messages
+        then: Joi.string().trim().min(1).required(),
+        otherwise: Joi.forbidden()
     })
     .messages({
         'string.base': 's3Key must be a string',
-        // 'any.required': 's3Key is required for image messages'
+        'any.required': 's3Key is required for image messages',
+        'any.forbidden': 's3Key is not allowed for text messages',
+        'string.empty': 's3Key cannot be empty for image messages',
+        'string.min': 's3Key cannot be empty for image messages'
     })
 });
 
