@@ -1,5 +1,5 @@
 console.log("<<<<< EXECUTING SIMPLIFIED src/app.js - VERSION " + Date.now() + " >>>>>");
-// src/app.js (Temporary Simplification)
+// src/app.js (Step 2 Complete)
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
 const cors = require('@koa/cors');
@@ -12,45 +12,32 @@ const uploadRoutes = require('./api/uploadRoutes');
 
 const app = new Koa();
 
-app.proxy = true; // <<<<<<<<<< 新增此行
+app.proxy = true;
 
-// Apply error handler middleware AT THE TOP
-app.use(errorHandler);
+// Restore bodyParser and cors here, before the temp logger
+app.use(cors());
+app.use(bodyParser());
 
-// Middlewares
-app.use(cors()); // Enable CORS for all routes
-app.use(bodyParser()); // Parse request bodies
-
-// Middleware to log every request
+// Middleware to log every request (our temporary logger)
 app.use(async (ctx, next) => {
     console.log(`[TEMP APP LOG] Request received: ${ctx.method} ${ctx.url}`);
     try {
         await next();
         console.log(`[TEMP APP LOG] Request finished for: ${ctx.method} ${ctx.url} with status ${ctx.status}`);
     } catch (err) {
-        console.error(`[TEMP APP LOG] Error in request pipeline for ${ctx.method} ${ctx.url}:`, err);
-        ctx.status = 500;
-        ctx.body = 'Temporary Internal Server Error';
-        // Make sure to re-throw or emit if you want app.on('error') to catch it for middleware errors
-        // For now, we log it here directly.
+        console.error(`[TEMP APP LOG] Error in request pipeline for ${ctx.method} ${ctx.url}:`, err.stack || err);
+        throw err; // Re-throw for centralized error handlers
     }
 });
 
-// Simple route for GET /
-app.use(async (ctx) => {
+// Simple route for GET / (our temporary route)
+app.use(async (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === '/') {
         console.log('[TEMP APP LOG] Handling GET /');
-        ctx.body = 'Hello from Koa root!';
-        // No error, should return 200
-    } else {
-        // For any other path during this test, return 404
-        // This will also include /socket.io/ paths if Nginx forwards them here
-        console.log(`[TEMP APP LOG] Path ${ctx.method} ${ctx.path} not specifically handled by simple router, Socket.IO should handle its own path if configured correctly with Nginx.`);
-        // Let Koa handle non-matched routes, which will typically result in a 404 if no other middleware handles it.
-        // We don't explicitly set 404 here to see default Koa behavior or if other middleware (like a router further down if we had one) would pick it up.
-        // For socket.io, its own internal router should handle /socket.io/ requests if Nginx is proxying correctly to the Socket.IO server instance (not just the Koa app).
-        // However, since Nginx error shows GET /, we focus on that.
+        ctx.body = 'Hello from Koa root! (Step 2)';
+        return; 
     }
+    await next();
 });
 
 // API Routes - to be uncommented and implemented later
