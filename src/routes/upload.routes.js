@@ -15,7 +15,7 @@ router.use(protect);
 
 /**
  * @swagger
- * /upload/presigned-url:
+ * /api/v1/upload/presigned-url:
  *   get:
  *     summary: Generate a presigned URL for uploading a file to AWS S3
  *     tags: [Upload]

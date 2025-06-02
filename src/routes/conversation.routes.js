@@ -17,7 +17,7 @@ router.use(protect); // All routes below are protected
 
 /**
  * @swagger
- * /conversations:
+ * /api/v1/conversations:
  *   post:
  *     summary: Create a new conversation
  *     tags: [Conversations]
@@ -88,7 +88,7 @@ router.route('/')
 
 /**
  * @swagger
- * /conversations/{conversationId}:
+ * /api/v1/conversations/{conversationId}:
  *   get:
  *     summary: Get a specific conversation by its ID
  *     tags: [Conversations]
@@ -132,7 +132,7 @@ router.route('/:conversationId')
 
 /**
  * @swagger
- * /conversations/{conversationId}/messages:
+ * /api/v1/conversations/{conversationId}/messages:
  *   post:
  *     summary: Create a new message in a specific conversation
  *     tags: [Conversations] # Grouped under Conversations for logical flow

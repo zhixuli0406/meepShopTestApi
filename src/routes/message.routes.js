@@ -16,7 +16,7 @@ router.use(protect); // All routes below are protected
 
 /**
  * @swagger
- * /messages:
+ * /api/v1/messages:
  *   get:
  *     summary: Get messages for a specific conversation with pagination
  *     tags: [Messages]

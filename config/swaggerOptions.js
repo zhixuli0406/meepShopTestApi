@@ -55,7 +55,7 @@ and WebSockets for real-time communication.
     },
     servers: [
       {
-        url: `http://localhost:${config.port || 3001}/api/v1`,
+        url: `http://localhost:${config.port || 3001}`,
         description: 'Development server',
       },
       // You can add more servers here (e.g., staging, production)
