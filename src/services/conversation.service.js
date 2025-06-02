@@ -26,7 +26,7 @@ exports.createConversation = async (userId, participantIds, title) => {
   });
 
   if (existingConversation) {
-    return existingConversation;
+    return await Conversation.findById(existingConversation._id).populate('participants', 'username avatar legacyUserId _id');
   }
 
   const conversation = await Conversation.create({
