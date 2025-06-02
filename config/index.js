@@ -1,5 +1,5 @@
 // config/index.js
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') }); // Load environment variables from .env file
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }); // Load environment variables from .env file
 
 const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
