@@ -191,7 +191,7 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Conversation not found (Note: This check might be implicitly removed if controller stops checking for conversation existence before fetching messages)
+ *         description: "Conversation not found (Note: This check might be implicitly removed if controller stops checking for conversation existence before fetching messages)"
  *         content:
  *           application/json:
  *             schema:
