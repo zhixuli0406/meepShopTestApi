@@ -5,36 +5,47 @@ const connectDB = require('./config/db');
 const config = require('./config');
 const { Server } = require('socket.io');
 const initializeSocketHandlers = require('./src/sockets'); // Import the handler initializer
+const seedDatabase = require('./src/utils/seedDatabase'); // Import the seeder
 
-connectDB();
+// connectDB(); // Call connectDB and then seed
 
-const httpServer = http.createServer(app);
+const startServer = async () => {
+  await connectDB(); // Ensure DB is connected before attempting to seed or start server
+  await seedDatabase(); // Seed the database if necessary
 
-const io = new Server(httpServer, {
-  cors: {
-    origin: "*", // Adjust for production
-    methods: ["GET", "POST"]
-  }
-});
+  const httpServer = http.createServer(app);
 
-app.set('socketio', io);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*", // Adjust for production
+      methods: ["GET", "POST"]
+    }
+  });
 
-// Initialize Socket.IO event handlers
-initializeSocketHandlers(io);
+  app.set('socketio', io);
 
-// This basic io.on connection is now handled within initializeSocketHandlers
-// io.on('connection', (socket) => {
-//   console.log(`Socket connected: ${socket.id}`);
-//   socket.on('disconnect', () => {
-//     console.log(`Socket disconnected: ${socket.id}`);
-//   });
-// });
+  // Initialize Socket.IO event handlers
+  initializeSocketHandlers(io);
 
-const PORT = config.port || 3001;
+  // This basic io.on connection is now handled within initializeSocketHandlers
+  // io.on('connection', (socket) => {
+  //   console.log(`Socket connected: ${socket.id}`);
+  //   socket.on('disconnect', () => {
+  //     console.log(`Socket disconnected: ${socket.id}`);
+  //   });
+  // });
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running in ${config.nodeEnv} mode on port ${PORT}`);
-  console.log(`Base URL: http://localhost:${PORT}`);
+  const PORT = config.port || 3001;
+
+  httpServer.listen(PORT, () => {
+    console.log(`Server running in ${config.nodeEnv} mode on port ${PORT}`);
+    console.log(`Base URL: http://localhost:${PORT}`);
+  });
+};
+
+startServer().catch(err => {
+    console.error("Failed to start server:", err);
+    process.exit(1);
 });
 
 process.on('unhandledRejection', (err, promise) => {
