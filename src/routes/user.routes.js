@@ -11,62 +11,10 @@ router.use(protect);
  * @swagger
  * tags:
  *   name: Users
- *   description: User management and profile operations
+ *   description: User management and profile operations (Currently no specific user routes, see Auth for /me)
  */
 
-/**
- * @swagger
- * /api/v1/users/me:
- *   patch:
- *     summary: Update current authenticated user's profile (username or avatar)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/UpdateMeInput'
- *     responses:
- *       200:
- *         description: User profile updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status: { type: string, example: 'success' }
- *                 data:
- *                   type: object
- *                   properties:
- *                     user: { $ref: '#/components/schemas/UserResponse' }
- *       400:
- *         description: Bad request (e.g., no fields to update, invalid data)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized (token missing or invalid)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       409:
- *         description: Conflict (e.g., username already taken)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-router.patch('/me', userController.updateMe);
+// router.patch('/me', userController.updateMe); // This line and its JSDoc are removed
 
 // Future user-related routes can be added here, e.g.:
 // router.patch('/updateMyPassword', authController.updatePassword); // (Requires authController to have this method)

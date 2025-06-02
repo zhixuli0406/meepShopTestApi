@@ -339,23 +339,6 @@
             "example": "https://bucket.s3.region.amazonaws.com/user-uploads/userId/uuid.jpg"
           }
         }
-      },
-      "UpdateMeInput": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string",
-            "example": "new_john_doe",
-            "description": "New username. If provided, must be unique among users other than the current one."
-          },
-          "avatar": {
-            "type": "string",
-            "example": "https://example.com/new_avatar.jpg",
-            "format": "url",
-            "description": "New URL for the user's avatar."
-          }
-        },
-        "minProperties": 1
       }
     }
   },
@@ -502,6 +485,97 @@
                       }
                     }
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (e.g., token missing or invalid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update the currently authenticated user's profile",
+        "description": "Allows updating the username and avatar of the authenticated user. Password updates should be handled through a dedicated endpoint if implemented.",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "The user's new username.",
+                    "example": "new_john_doe"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "description": "URL to the user's new avatar image.",
+                    "example": "https://example.com/new_avatar.jpg"
+                  }
+                },
+                "minProperties": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully updated user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/UserResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., invalid data format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1017,95 +1091,6 @@
           }
         }
       }
-    },
-    "/api/v1/users/me": {
-      "patch": {
-        "summary": "Update current authenticated user's profile (username or avatar)",
-        "tags": [
-          "Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateMeInput"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "User profile updated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "success"
-                    },
-                    "data": {
-                      "type": "object",
-                      "properties": {
-                        "user": {
-                          "$ref": "#/components/schemas/UserResponse"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request (e.g., no fields to update, invalid data)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized (token missing or invalid)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict (e.g., username already taken)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "tags": [
@@ -1127,7 +1112,7 @@
     },
     {
       "name": "Users",
-      "description": "User management and profile operations"
+      "description": "User management and profile operations (Currently no specific user routes, see Auth for /me)"
     }
   ]
 }

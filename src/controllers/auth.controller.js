@@ -37,4 +37,35 @@ exports.getMe = catchAsync(async (req, res, next) => {
       user: userToSend,
     },
   });
+});
+
+exports.updateMe = catchAsync(async (req, res, next) => {
+  // User ID comes from req.user set by the 'protect' middleware
+  const userId = req.user.id;
+
+  // Filter request body to only include allowed fields for update by user themselves
+  const filteredBody = {};
+  if (req.body.username) filteredBody.username = req.body.username;
+  if (req.body.avatar) filteredBody.avatar = req.body.avatar;
+  // Do NOT allow password updates via this route for security reasons.
+  // Password updates should have a dedicated flow (e.g., /updateMyPassword).
+  // Email is not in the User model currently.
+
+  if (Object.keys(filteredBody).length === 0) {
+    return next(new AppError('Please provide at least one field to update (username or avatar).', 400));
+  }
+
+  const updatedUser = await userService.updateUserProfile(userId, filteredBody);
+
+  // userService.updateUserProfile should return the user document without the password
+  // If it does, and you want to be absolutely sure, you can do:
+  // const userToSend = { ...updatedUser._doc };
+  // delete userToSend.password;
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      user: updatedUser, // Assuming updateUserProfile returns user without password
+    },
+  });
 }); 

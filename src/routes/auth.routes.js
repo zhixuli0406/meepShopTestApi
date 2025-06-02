@@ -125,4 +125,66 @@ router.post('/login', authController.login);
  */
 router.get('/me', protect, authController.getMe);
 
+/**
+ * @swagger
+ * /api/v1/auth/me:
+ *   patch:
+ *     summary: Update the currently authenticated user's profile
+ *     description: Allows updating the username and avatar of the authenticated user. Password updates should be handled through a dedicated endpoint if implemented.
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: The user's new username.
+ *                 example: new_john_doe
+ *               avatar:
+ *                 type: string
+ *                 description: URL to the user's new avatar image.
+ *                 example: https://example.com/new_avatar.jpg
+ *             minProperties: 1 # Ensure at least one field is provided for update
+ *     responses:
+ *       200:
+ *         description: Successfully updated user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/UserResponse' # Assuming UserResponse is suitable
+ *       400:
+ *         description: Bad request (e.g., invalid data format)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized (e.g., token missing or invalid)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.patch('/me', protect, authController.updateMe);
+
 module.exports = router; 
