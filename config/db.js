@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const config = require('./index');
 
+mongoose.set('strictQuery', true); // Suppress Mongoose 7 strictQuery warning
+
 const connectDB = async () => {
   try {
     await mongoose.connect(config.mongoURI, {
