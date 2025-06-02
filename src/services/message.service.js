@@ -30,6 +30,33 @@ exports.createMessage = async (messageData) => {
   return populatedMessage;
 };
 
+exports.createSystemMessage = async (conversationId, content) => {
+  if (!conversationId || !content) {
+    throw new AppError('Missing required fields for system message (conversationId, content).', 400);
+  }
+
+  const systemMessage = await Message.create({
+    conversationId,
+    type: 'system',
+    content,
+    senderId: null, // Explicitly set senderId to null for system messages
+  });
+
+  // Populate senderId (even if null, to maintain consistency if needed downstream, though it will be null)
+  // Or simply return the message without populating sender if it's always null for system messages
+  const populatedSystemMessage = await Message.findById(systemMessage._id)
+    .populate({ path: 'senderId', select: 'username avatar legacyUserId _id' }); // This will resolve to null for senderId
+
+  // Optionally, update the conversation's last message if system messages should also do that.
+  // For "user joined" messages, it might be better not to update the last message preview.
+  // Or, if they should, then call ConversationService.updateConversationLastMessage here.
+  // For now, let's assume system "join" messages don't become "lastMessageText".
+  // If they should, this would be the place:
+  // await ConversationService.updateConversationLastMessage(conversationId, populatedSystemMessage);
+  
+  return populatedSystemMessage;
+};
+
 exports.getMessagesByConversation = async (conversationId, queryOptions = {}) => {
   const page = parseInt(queryOptions.page, 10) || 1;
   const limit = parseInt(queryOptions.limit, 10) || 50;

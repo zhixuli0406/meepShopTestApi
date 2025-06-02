@@ -73,6 +73,24 @@ exports.getConversationById = async (conversationId, userId) => {
   return conversation;
 };
 
+exports.addUserToConversation = async (conversationId, userId) => {
+  // Find the conversation and add the user to the participants array if not already present
+  // Using $addToSet ensures idempotency (user is only added if not already there)
+  const updatedConversation = await Conversation.findByIdAndUpdate(
+    conversationId,
+    { $addToSet: { participants: userId } },
+    { new: true } // Return the updated document
+  ).populate('participants', 'username avatar _id'); // Populate for returning updated list if needed
+
+  if (!updatedConversation) {
+    // This case should ideally be handled before calling this, 
+    // e.g., by ensuring conversation exists.
+    // But as a safeguard:
+    throw new AppError('Conversation not found while trying to add user.', 404);
+  }
+  return updatedConversation;
+};
+
 exports.findConversationByLegacyId = async (legacyConvId) => {
     return await Conversation.findOne({ legacyConvId });
 };
