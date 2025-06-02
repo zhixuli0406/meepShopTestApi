@@ -30,7 +30,7 @@ exports.createMessage = async (messageData) => {
   return populatedMessage;
 };
 
-exports.getMessagesByConversation = async (conversationId, userId, queryOptions = {}) => {
+exports.getMessagesByConversation = async (conversationId, queryOptions = {}) => {
   const page = parseInt(queryOptions.page, 10) || 1;
   const limit = parseInt(queryOptions.limit, 10) || 50;
   const skip = (page - 1) * limit;

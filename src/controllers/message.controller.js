@@ -46,27 +46,24 @@ exports.createMessage = catchAsync(async (req, res, next) => {
 });
 
 exports.getMessages = catchAsync(async (req, res, next) => {
-  // OLD API spec: /messages?conversationId={id}
-  // NEW API spec: /conversations/:conversationId/messages
-  const { conversationId } = req.params; // Changed from req.query
-  const userId = req.user.id;
+  const { conversationId } = req.params;
+  // const userId = req.user.id; // Removed: No longer needed for auth check here
 
   if (!conversationId) {
-    // This check might be redundant if the route parameter is always present due to Express routing
     throw new AppError('Conversation ID is required as a route parameter.', 400);
   }
 
-  // Verify user is part of the conversation before fetching messages
-  await conversationService.getConversationById(conversationId, userId);
-  // conversationService.getConversationById will throw if not found or user not participant
+  // Removed user authorization check for this public endpoint
+  // await conversationService.getConversationById(conversationId, userId);
   
   const queryOptions = {
-    page: req.query.page,       // Pagination params can still come from query
-    limit: req.query.limit,      // Pagination params can still come from query
-    sortBy: req.query.sortBy,    // Sorting params can still come from query
+    page: req.query.page,       
+    limit: req.query.limit,      
+    sortBy: req.query.sortBy,    
   };
 
-  const result = await messageService.getMessagesByConversation(conversationId, userId, queryOptions);
+  // Pass only conversationId and queryOptions to the service
+  const result = await messageService.getMessagesByConversation(conversationId, queryOptions);
 
   res.status(200).json({
     status: 'success',

@@ -138,10 +138,9 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  * @swagger
  * /api/v1/conversations/{conversationId}/messages:
  *   get:
- *     summary: Get messages for a specific conversation (Protected)
+ *     summary: Get messages for a specific conversation (Public)
+ *     description: Retrieves messages for any given conversation ID. No authentication required.
  *     tags: [Conversations]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: conversationId
@@ -165,7 +164,7 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *         name: sortBy
  *         schema:
  *           type: string
- *           default: 'createdAt:asc' # Default changed to asc for typical chat UIs
+ *           default: 'createdAt:asc'
  *         description: Sort order for messages (e.g., 'createdAt:asc' or 'createdAt:desc').
  *     responses:
  *       200:
@@ -177,7 +176,7 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *               properties:
  *                 status: { type: string, example: 'success' }
  *                 data:
- *                   type: object # Referring to MessageService.getMessagesByConversation structure
+ *                   type: object
  *                   properties:
  *                     messages:
  *                       type: array
@@ -191,14 +190,8 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *       401:
- *         description: Unauthorized (user not part of conversation or not logged in)
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Conversation not found
+ *         description: Conversation not found (Note: This check might be implicitly removed if controller stops checking for conversation existence before fetching messages)
  *         content:
  *           application/json:
  *             schema:
@@ -254,7 +247,7 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.route('/:conversationId/messages')
-  .get(protect, messageController.getMessages)
+  .get(messageController.getMessages)
   .post(protect, messageController.createMessage);
 
 module.exports = router; 
