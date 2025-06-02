@@ -118,4 +118,10 @@ exports.updateUserProfile = async (userId, updateData) => {
   }
 
   return updatedUser;
+};
+
+exports.getAllUsers = async () => {
+  // Exclude password field from the results
+  const users = await User.find({}).select('-password');
+  return users;
 }; 
