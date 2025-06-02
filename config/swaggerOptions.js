@@ -200,6 +200,23 @@ and WebSockets for real-time communication.
                 fileKey: { type: 'string', example: 'user-uploads/userId/uuid.jpg' },
                 publicUrl: { type: 'string', example: 'https://bucket.s3.region.amazonaws.com/user-uploads/userId/uuid.jpg'}
             }
+        },
+        UpdateMeInput: {
+            type: 'object',
+            properties: {
+                username: { 
+                    type: 'string',
+                    example: 'new_john_doe',
+                    description: 'New username. If provided, must be unique among users other than the current one.'
+                },
+                avatar: { 
+                    type: 'string',
+                    example: 'https://example.com/new_avatar.jpg',
+                    format: 'url',
+                    description: 'New URL for the user\'s avatar.'
+                }
+            },
+            minProperties: 1
         }
       }
     },

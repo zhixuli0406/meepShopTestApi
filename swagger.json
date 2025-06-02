@@ -10,7 +10,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000/api/v1",
+      "url": "http://localhost:3000",
       "description": "Development server"
     }
   ],
@@ -339,11 +339,28 @@
             "example": "https://bucket.s3.region.amazonaws.com/user-uploads/userId/uuid.jpg"
           }
         }
+      },
+      "UpdateMeInput": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "new_john_doe",
+            "description": "New username. If provided, must be unique among users other than the current one."
+          },
+          "avatar": {
+            "type": "string",
+            "example": "https://example.com/new_avatar.jpg",
+            "format": "url",
+            "description": "New URL for the user's avatar."
+          }
+        },
+        "minProperties": 1
       }
     }
   },
   "paths": {
-    "/auth/register": {
+    "/api/v1/auth/register": {
       "post": {
         "summary": "Register a new user",
         "tags": [
@@ -393,7 +410,7 @@
         }
       }
     },
-    "/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "summary": "Log in an existing user",
         "tags": [
@@ -453,7 +470,7 @@
         }
       }
     },
-    "/auth/me": {
+    "/api/v1/auth/me": {
       "get": {
         "summary": "Get the currently authenticated user's profile",
         "tags": [
@@ -512,7 +529,7 @@
         }
       }
     },
-    "/conversations": {
+    "/api/v1/conversations": {
       "post": {
         "summary": "Create a new conversation",
         "tags": [
@@ -635,7 +652,7 @@
         }
       }
     },
-    "/conversations/{conversationId}": {
+    "/api/v1/conversations/{conversationId}": {
       "get": {
         "summary": "Get a specific conversation by its ID",
         "tags": [
@@ -705,7 +722,7 @@
         }
       }
     },
-    "/conversations/{conversationId}/messages": {
+    "/api/v1/conversations/{conversationId}/messages": {
       "post": {
         "summary": "Create a new message in a specific conversation",
         "tags": [
@@ -795,7 +812,7 @@
         }
       }
     },
-    "/messages": {
+    "/api/v1/messages": {
       "get": {
         "summary": "Get messages for a specific conversation with pagination",
         "tags": [
@@ -917,7 +934,7 @@
         }
       }
     },
-    "/upload/presigned-url": {
+    "/api/v1/upload/presigned-url": {
       "get": {
         "summary": "Generate a presigned URL for uploading a file to AWS S3",
         "tags": [
@@ -1000,6 +1017,95 @@
           }
         }
       }
+    },
+    "/api/v1/users/me": {
+      "patch": {
+        "summary": "Update current authenticated user's profile (username or avatar)",
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/UserResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., no fields to update, invalid data)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (token missing or invalid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g., username already taken)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "tags": [
@@ -1018,6 +1124,10 @@
     {
       "name": "Upload",
       "description": "File upload utilities, such as generating presigned URLs for S3"
+    },
+    {
+      "name": "Users",
+      "description": "User management and profile operations"
     }
   ]
 }

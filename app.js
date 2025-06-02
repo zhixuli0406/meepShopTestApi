@@ -14,6 +14,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const conversationRoutes = require('./src/routes/conversation.routes');
 const messageRoutes = require('./src/routes/message.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
+const userRoutes = require('./src/routes/user.routes');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use(`${apiBasePath}/auth`, authRoutes);
 app.use(`${apiBasePath}/conversations`, conversationRoutes);
 app.use(`${apiBasePath}/messages`, messageRoutes);
 app.use(`${apiBasePath}/upload`, uploadRoutes);
+app.use(`${apiBasePath}/users`, userRoutes);
 
 app.use((req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);

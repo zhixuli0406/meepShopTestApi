@@ -86,4 +86,36 @@ exports.findOrCreateUserFromLegacy = async (legacyUserData) => {
         });
     }
     return user;
+};
+
+exports.updateUserProfile = async (userId, updateData) => {
+  // Filter out fields that users are not allowed to update directly
+  const allowedUpdates = {};
+  if (updateData.username !== undefined) allowedUpdates.username = updateData.username;
+  if (updateData.avatar !== undefined) allowedUpdates.avatar = updateData.avatar;
+  // Add other fields here if they are allowed to be updated, e.g., bio, preferences etc.
+
+  if (Object.keys(allowedUpdates).length === 0) {
+    throw new AppError('No valid fields provided for update.', 400);
+  }
+
+  // If username is being updated, check for uniqueness if your business logic requires it
+  if (allowedUpdates.username) {
+    const existingUser = await User.findOne({ username: allowedUpdates.username });
+    // Ensure the found user is not the current user if username is a unique field
+    if (existingUser && existingUser._id.toString() !== userId.toString()) {
+      throw new AppError('This username is already taken.', 409);
+    }
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, allowedUpdates, {
+    new: true, // Return the modified document rather than the original
+    runValidators: true, // Ensure that schema validations are run
+  });
+
+  if (!updatedUser) {
+    throw new AppError('No user found with that ID to update.', 404);
+  }
+
+  return updatedUser;
 }; 
