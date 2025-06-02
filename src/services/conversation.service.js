@@ -12,6 +12,18 @@ exports.createConversation = async (userId, participantIds, title) => {
     console.error('[Service:createConversation] Error: Participants are required.');
     throw new AppError('Participants are required to create a conversation.', 400);
   }
+  // It's generally good practice to have a title for group chats, 
+  // but allow no title for 2-person chats if that's the design.
+  // For this new logic, title becomes a key part of uniqueness.
+  if (!title && (participantIds.length + 1 > 2)) { // More than 2 participants implies a group chat that should have a title
+      console.error('[Service:createConversation] Error: Title is required for group conversations.');
+      throw new AppError('Title is required for group conversations with more than 2 participants.', 400);
+  } else if (!title && (participantIds.length +1 <=2)) {
+    // For 2-person chats, if no title is provided, we might auto-generate one or leave it null
+    // For now, if title is part of uniqueness, it should be provided or handled consistently.
+    // Let's assume for now that a 2-person chat CAN have an empty/null title, and uniqueness will be based on that.
+    console.log('[Service:createConversation] No title provided for a 2-person chat.');
+  }
 
   const allParticipantMongoIds = [...new Set([userId.toString(), ...participantIds.map(id => String(id))])];
   console.log('[Service:createConversation] All distinct participant Mongo IDs (initiator + provided):', allParticipantMongoIds);
@@ -26,31 +38,34 @@ exports.createConversation = async (userId, participantIds, title) => {
     throw new AppError(`One or more participant user IDs are invalid or not found: ${missingIds.join(', ')}.`, 404);
   }
 
-  // For finding existing conversations, the order of participants matters if it's a 2-person chat.
-  // Otherwise, for group chats, the exact set matters.
   let queryParticipantsCriteria = { $all: allParticipantMongoIds, $size: allParticipantMongoIds.length };
   if (allParticipantMongoIds.length === 2) {
-    // For 2-person chats, ensure consistent ordering for the query to find existing ones regardless of who initiated.
-    // The actual stored participants array can maintain the order of addition or initiator first.
-    // However, the find query should use a sorted list of IDs for $all to work consistently.
     const sortedParticipantIdsForQuery = [...allParticipantMongoIds].sort();
     queryParticipantsCriteria = { $all: sortedParticipantIdsForQuery, $size: sortedParticipantIdsForQuery.length };
-    console.log('[Service:createConversation] Querying for existing 2-person chat with sorted IDs:', sortedParticipantIdsForQuery);
+    console.log('[Service:createConversation] Participant criteria for 2-person chat (sorted for query):', sortedParticipantIdsForQuery);
   } else {
-    console.log('[Service:createConversation] Querying for existing group chat with IDs:', allParticipantMongoIds);
+    console.log('[Service:createConversation] Participant criteria for group chat:', allParticipantMongoIds);
   }
   
-  const existingConversation = await Conversation.findOne({ participants: queryParticipantsCriteria });
+  // New logic: Check for existing conversation with THE SAME participants AND THE SAME title.
+  // title can be null or an empty string, so handle that in the query.
+  const queryTitle = title === undefined || title === null ? null : title; // Normalize title for query
+
+  console.log('[Service:createConversation] Querying for existing chat with participants criteria and title:', queryTitle);
+  const existingConversation = await Conversation.findOne({
+    participants: queryParticipantsCriteria,
+    title: queryTitle 
+  });
 
   if (existingConversation) {
-    console.log('[Service:createConversation] Found existing conversation:', existingConversation._id);
-    return await Conversation.findById(existingConversation._id).populate('participants', 'username avatar legacyUserId _id');
+    console.error('[Service:createConversation] Error: Conversation with these participants and title already exists. ID:', existingConversation._id);
+    throw new AppError('A conversation with the same participants and title already exists.', 409); // 409 Conflict
   }
 
-  console.log('[Service:createConversation] No existing conversation found. Creating a new one...');
+  console.log('[Service:createConversation] No existing conflicting conversation found. Creating a new one...');
   const conversationData = {
-    participants: allParticipantMongoIds, // Store with original/intended participant order
-    title: title || undefined, // Ensure title is not stored if null or empty string from request, unless explicitly allowed by model
+    participants: allParticipantMongoIds, 
+    title: queryTitle, // Use the normalized title
   };
   console.log('[Service:createConversation] Data for new conversation:', conversationData);
 
@@ -60,6 +75,11 @@ exports.createConversation = async (userId, participantIds, title) => {
     console.log('[Service:createConversation] Successfully created new conversation, ID:', newConversation._id);
   } catch (error) {
     console.error('[Service:createConversation] Error creating conversation in DB:', error);
+    // Consider if the error might be due to a race condition creating a duplicate after the check.
+    // Mongoose unique index on (participants, title) would be more robust if this is a strict requirement.
+    if (error.code === 11000) { // MongoDB duplicate key error
+        throw new AppError('A conversation with these details already exists (duplicate key error).', 409);
+    }
     throw new AppError('Failed to create conversation in database.', 500, error);
   }
   
