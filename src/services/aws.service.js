@@ -3,13 +3,20 @@ const config = require('../../config');
 const { v4: uuidv4 } = require('uuid');
 const AppError = require('../utils/appError');
 
-AWS.config.update({
+// AWS.config.update({
+//   accessKeyId: config.aws.accessKeyId,
+//   secretAccessKey: config.aws.secretAccessKey,
+//   region: config.aws.region,
+// });
+// It's often better to configure the S3 client directly
+
+const s3 = new AWS.S3({
   accessKeyId: config.aws.accessKeyId,
   secretAccessKey: config.aws.secretAccessKey,
   region: config.aws.region,
+  s3ForcePathStyle: true, // Enforce path-style URLs
+  signatureVersion: 'v4',   // Recommended signature version
 });
-
-const s3 = new AWS.S3();
 
 exports.generatePresignedPutUrl = async (originalFileName, fileType, userId) => {
   if (!config.aws.s3BucketName) {
@@ -21,7 +28,8 @@ exports.generatePresignedPutUrl = async (originalFileName, fileType, userId) => 
 
   const fileExtension = originalFileName.split('.').pop();
   const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-  const s3Key = `user-uploads/${userId || 'general'}/${uniqueFileName}`; 
+  // Ensure s3Key does not start with a '/' if bucket name already implies it or for consistency
+  const s3Key = `user-uploads/${userId || 'general'}/${uniqueFileName}`;
 
   const params = {
     Bucket: config.aws.s3BucketName,
@@ -32,7 +40,8 @@ exports.generatePresignedPutUrl = async (originalFileName, fileType, userId) => 
 
   try {
     const presignedUrl = await s3.getSignedUrlPromise('putObject', params);
-    const publicFileUrl = `https://${config.aws.s3BucketName}.s3.${config.aws.region}.amazonaws.com/${s3Key}`;
+    // Construct public URL using path style for consistency
+    const publicFileUrl = `https://s3.${config.aws.region}.amazonaws.com/${config.aws.s3BucketName}/${s3Key}`;
     
     return {
       presignedUrl,
