@@ -20,9 +20,8 @@ exports.createConversation = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.getMyConversations = catchAsync(async (req, res, next) => {
-  const userId = req.user.id;
-  const conversations = await conversationService.getUserConversations(userId);
+exports.listAllConversations = catchAsync(async (req, res, next) => {
+  const conversations = await conversationService.getAllConversations();
   res.status(200).json({
     status: 'success',
     results: conversations.length,

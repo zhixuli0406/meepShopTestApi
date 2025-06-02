@@ -13,13 +13,44 @@ const router = express.Router();
  *   description: Managing user conversations and messages within them
  */
 
-router.use(protect); // All routes below are protected
+// Public route to get all conversations
+/**
+ * @swagger
+ * /api/v1/conversations:
+ *   get:
+ *     summary: Get all conversations in the system (Public)
+ *     tags: [Conversations]
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved all conversations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: 'success' }
+ *                 results: { type: integer, example: 10 }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     conversations:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/ConversationResponse' }
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get('/', conversationController.listAllConversations);
 
+// Protected route to create a new conversation
 /**
  * @swagger
  * /api/v1/conversations:
  *   post:
- *     summary: Create a new conversation
+ *     summary: Create a new conversation (Protected)
  *     tags: [Conversations]
  *     security:
  *       - bearerAuth: []
@@ -54,43 +85,16 @@ router.use(protect); // All routes below are protected
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
- *   get:
- *     summary: Get all conversations for the authenticated user
- *     tags: [Conversations]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Successfully retrieved conversations
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status: { type: string, example: 'success' }
- *                 results: { type: integer, example: 2 }
- *                 data:
- *                   type: object
- *                   properties:
- *                     conversations: 
- *                       type: array
- *                       items: { $ref: '#/components/schemas/ConversationResponse' }
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.route('/')
-  .post(conversationController.createConversation)
-  .get(conversationController.getMyConversations);
+router.post('/', protect, conversationController.createConversation);
 
+
+// Protected route for specific conversation operations
 /**
  * @swagger
  * /api/v1/conversations/{conversationId}:
  *   get:
- *     summary: Get a specific conversation by its ID
+ *     summary: Get a specific conversation by its ID (Protected)
  *     tags: [Conversations]
  *     security:
  *       - bearerAuth: []
@@ -127,15 +131,15 @@ router.route('/')
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.route('/:conversationId')
-  .get(conversationController.getConversationById);
+router.get('/:conversationId', protect, conversationController.getConversationById);
 
+// Protected route to create a message in a conversation
 /**
  * @swagger
  * /api/v1/conversations/{conversationId}/messages:
  *   post:
- *     summary: Create a new message in a specific conversation
- *     tags: [Conversations] # Grouped under Conversations for logical flow
+ *     summary: Create a new message in a specific conversation (Protected)
+ *     tags: [Conversations]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -183,6 +187,6 @@ router.route('/:conversationId')
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:conversationId/messages', messageController.createMessage);
+router.post('/:conversationId/messages', protect, messageController.createMessage);
 
 module.exports = router; 

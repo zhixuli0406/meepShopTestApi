@@ -46,6 +46,16 @@ exports.getUserConversations = async (userId) => {
   return conversations;
 };
 
+exports.getAllConversations = async () => {
+  const conversations = await Conversation.find({})
+    .populate({
+      path: 'participants',
+      select: 'username avatar legacyUserId _id',
+    })
+    .sort({ updatedAt: -1 });
+  return conversations;
+};
+
 exports.getConversationById = async (conversationId, userId) => {
   const conversation = await Conversation.findById(conversationId)
     .populate({
