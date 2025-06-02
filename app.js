@@ -49,13 +49,17 @@ app.use((req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  console.error('ERROR 💥', err);
-  res.status(statusCode);
-  res.json({
-    status: err.status || 'error',
-    message: err.message,
-    stack: config.nodeEnv === 'production' ? null : err.stack,
+  let statusCode = err.statusCode || 500; // Prefer err.statusCode
+  if (res.statusCode !== 200 && res.statusCode >= 400) { // If res.statusCode was already set to an error by a previous middleware
+      statusCode = res.statusCode;
+  }
+
+  console.error('ERROR 💥', err); // Log the full error object
+  
+  res.status(statusCode).json({
+    status: err.status || (statusCode >= 500 ? 'error' : 'fail'), // Use err.status, or derive from statusCode
+    message: err.message || 'An unexpected error occurred',
+    stack: config.nodeEnv === 'production' ? null : err.stack, // Only send stack in dev
   });
 });
 
