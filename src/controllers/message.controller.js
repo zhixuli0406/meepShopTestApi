@@ -46,12 +46,14 @@ exports.createMessage = catchAsync(async (req, res, next) => {
 });
 
 exports.getMessages = catchAsync(async (req, res, next) => {
-  // API spec: /messages?conversationId={id}
-  const { conversationId } = req.query; 
+  // OLD API spec: /messages?conversationId={id}
+  // NEW API spec: /conversations/:conversationId/messages
+  const { conversationId } = req.params; // Changed from req.query
   const userId = req.user.id;
 
   if (!conversationId) {
-    throw new AppError('Conversation ID is required as a query parameter.', 400);
+    // This check might be redundant if the route parameter is always present due to Express routing
+    throw new AppError('Conversation ID is required as a route parameter.', 400);
   }
 
   // Verify user is part of the conversation before fetching messages
@@ -59,16 +61,15 @@ exports.getMessages = catchAsync(async (req, res, next) => {
   // conversationService.getConversationById will throw if not found or user not participant
   
   const queryOptions = {
-    page: req.query.page,
-    limit: req.query.limit,
-    sortBy: req.query.sortBy, 
+    page: req.query.page,       // Pagination params can still come from query
+    limit: req.query.limit,      // Pagination params can still come from query
+    sortBy: req.query.sortBy,    // Sorting params can still come from query
   };
 
   const result = await messageService.getMessagesByConversation(conversationId, userId, queryOptions);
 
   res.status(200).json({
     status: 'success',
-    // results: result.messages.length, // result itself contains totalMessages and messages array
     data: result,
   });
 }); 

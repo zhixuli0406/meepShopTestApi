@@ -133,10 +133,76 @@ router.post('/', protect, conversationController.createConversation);
  */
 router.get('/:conversationId', protect, conversationController.getConversationById);
 
-// Protected route to create a message in a conversation
+// Combined routes for messages within a conversation
 /**
  * @swagger
  * /api/v1/conversations/{conversationId}/messages:
+ *   get:
+ *     summary: Get messages for a specific conversation (Protected)
+ *     tags: [Conversations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: conversationId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the conversation to fetch messages for.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Number of messages per page.
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: 'createdAt:asc' # Default changed to asc for typical chat UIs
+ *         description: Sort order for messages (e.g., 'createdAt:asc' or 'createdAt:desc').
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status: { type: string, example: 'success' }
+ *                 data:
+ *                   type: object # Referring to MessageService.getMessagesByConversation structure
+ *                   properties:
+ *                     messages:
+ *                       type: array
+ *                       items: { $ref: '#/components/schemas/MessageResponse' }
+ *                     currentPage: { type: integer, example: 1 }
+ *                     totalPages: { type: integer, example: 3 }
+ *                     totalMessages: { type: integer, example: 150 }
+ *       400:
+ *         description: Bad request (e.g., invalid conversationId format)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized (user not part of conversation or not logged in)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Conversation not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *   post:
  *     summary: Create a new message in a specific conversation (Protected)
  *     tags: [Conversations]
@@ -187,6 +253,8 @@ router.get('/:conversationId', protect, conversationController.getConversationBy
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:conversationId/messages', protect, messageController.createMessage);
+router.route('/:conversationId/messages')
+  .get(protect, messageController.getMessages)
+  .post(protect, messageController.createMessage);
 
 module.exports = router; 
