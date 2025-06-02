@@ -4,6 +4,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const config = require('./config');
 const { Server } = require('socket.io');
+const initializeSocketHandlers = require('./src/sockets'); // Import the handler initializer
 
 connectDB();
 
@@ -16,23 +17,18 @@ const io = new Server(httpServer, {
   }
 });
 
-// Placeholder for where src/sockets/index.js will be initialized
-// const initializeSocketHandlers = require('./src/sockets');
-// initializeSocketHandlers(io);
+app.set('socketio', io);
 
-io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
+// Initialize Socket.IO event handlers
+initializeSocketHandlers(io);
 
-  // Example: join a room based on userId or a general room
-  // socket.join('some-room');
-
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
-
-  // More specific event handlers will be in src/sockets/message.handler.js etc.
-  // and orchestrated by src/sockets/index.js
-});
+// This basic io.on connection is now handled within initializeSocketHandlers
+// io.on('connection', (socket) => {
+//   console.log(`Socket connected: ${socket.id}`);
+//   socket.on('disconnect', () => {
+//     console.log(`Socket disconnected: ${socket.id}`);
+//   });
+// });
 
 const PORT = config.port || 3001;
 
@@ -43,10 +39,8 @@ httpServer.listen(PORT, () => {
 
 process.on('unhandledRejection', (err, promise) => {
   console.error(`Unhandled Rejection: ${err.message}`, err);
-  // httpServer.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
   console.error(`Uncaught Exception: ${err.message}`, err);
-  // httpServer.close(() => process.exit(1));
-}); 
+});

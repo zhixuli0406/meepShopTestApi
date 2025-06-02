@@ -4,6 +4,12 @@ const cors = require('cors');
 const morgan = require('morgan');
 const config = require('./config');
 
+// Import routes
+const authRoutes = require('./src/routes/auth.routes');
+const conversationRoutes = require('./src/routes/conversation.routes');
+const messageRoutes = require('./src/routes/message.routes');
+const uploadRoutes = require('./src/routes/upload.routes');
+
 const app = express();
 
 app.use(cors()); 
@@ -18,9 +24,12 @@ app.get('/', (req, res) => {
   res.status(200).json({ message: 'Welcome to MeepShop Chat API!', status: 'OK' });
 });
 
-// Routes will be added here later
-// Example: const authRoutes = require('./src/routes/auth.routes');
-// app.use('/api/v1/auth', authRoutes);
+// API Routes
+const apiBasePath = '/api/v1'; // Define a base path for API versioning
+app.use(`${apiBasePath}/auth`, authRoutes);
+app.use(`${apiBasePath}/conversations`, conversationRoutes);
+app.use(`${apiBasePath}/messages`, messageRoutes);
+app.use(`${apiBasePath}/upload`, uploadRoutes);
 
 app.use((req, res, next) => {
   const error = new Error(`Not Found - ${req.originalUrl}`);
@@ -30,8 +39,10 @@ app.use((req, res, next) => {
 
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  console.error('ERROR 💥', err);
   res.status(statusCode);
   res.json({
+    status: err.status || 'error',
     message: err.message,
     stack: config.nodeEnv === 'production' ? null : err.stack,
   });
