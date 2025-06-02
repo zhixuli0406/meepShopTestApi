@@ -1,20 +1,33 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const conversationSchema = new Schema({
-    participants: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    }],
-    lastMessage: {
-        type: Schema.Types.ObjectId,
-        ref: 'Message'
-        // This can be null initially or if a conversation has no messages
-    }
+const conversationSchema = new mongoose.Schema({
+  legacyConvId: { // From chat_data.json id
+    type: Number,
+    unique: true,
+    sparse: true,
+    index: true,
+  },
+  participants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  }],
+  title: { // Optional for group chats
+    type: String,
+    trim: true,
+  },
+  lastMessageText: { // From chat_data.json lastMessage
+    type: String,
+    trim: true,
+  },
+  lastMessageTimestamp: { // From chat_data.json conversation.timestamp
+    type: Date,
+  },
 }, {
-    timestamps: true // This will add createdAt and updatedAt fields
+  timestamps: true, // Adds createdAt and updatedAt
 });
+
+conversationSchema.index({ participants: 1 });
 
 const Conversation = mongoose.model('Conversation', conversationSchema);
 

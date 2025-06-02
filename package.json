@@ -1,28 +1,29 @@
 {
-  "name": "meepshoptestapi",
+  "name": "meepshop-chat-api",
   "version": "1.0.0",
-  "description": "本專案是一個聊天應用程式的後端 API 服務，使用 Node.js、Koa.js 和 MongoDB 建置。它支援文字與圖片訊息，圖片將儲存於 AWS S3。本服務將使用 WebSocket 進行即時對話通訊。",
-  "main": "index.js",
+  "description": "Real-time chat application API",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "import-data": "node ./scripts/importData.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.821.0",
-    "@aws-sdk/s3-request-presigner": "^3.821.0",
-    "@koa/cors": "^5.0.0",
-    "@koa/multer": "^4.0.0",
-    "aws-sdk": "^2.1692.0",
-    "dotenv": "^16.5.0",
-    "joi": "^17.13.3",
-    "koa": "^3.0.0",
-    "koa-bodyparser": "^4.4.1",
-    "koa-router": "^13.0.1",
-    "mongoose": "^8.15.1",
-    "multer": "^2.0.0",
-    "socket.io": "^4.8.1"
+    "aws-sdk": "^2.1000.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^6.0.12",
+    "morgan": "^1.10.0",
+    "socket.io": "^4.3.2",
+    "validator": "^13.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
-}
+} 
