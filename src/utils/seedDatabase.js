@@ -7,32 +7,41 @@ const Message = require('../models/message.model');
 const config = require('../../config'); // For NODE_ENV
 
 const seedDatabase = async () => {
+  console.log('[SEEDER] Checking conditions for database seeding...');
+  console.log(`[SEEDER] Current NODE_ENV: ${config.nodeEnv}`);
+
   if (config.nodeEnv !== 'development') {
-    console.log('Skipping database seeding in non-development environment.');
+    console.log('[SEEDER] Skipped: Not in development environment.');
     return;
   }
+  console.log('[SEEDER] Condition met: Running in development environment.');
 
   try {
+    console.log('[SEEDER] Checking existing user count...');
     const userCount = await User.countDocuments();
-    // Check if any collection is empty, or a specific one like User
+    console.log(`[SEEDER] Found ${userCount} users in the database.`);
+
     if (userCount > 0) {
-      console.log('Database already contains users. Skipping seed.');
+      console.log('[SEEDER] Skipped: Database already contains users.');
       return;
     }
-
-    console.log('Development environment and no users found. Proceeding with database seeding...');
+    console.log('[SEEDER] Condition met: No users found, proceeding with seed.');
 
     const chatDataPath = path.join(__dirname, '../../chat_data.json'); // Adjusted path from utils directory
+    console.log(`[SEEDER] Looking for seed data file at: ${chatDataPath}`);
+
     if (!fs.existsSync(chatDataPath)) {
-        console.error(`Seed data file not found at ${chatDataPath}. Skipping seed.`);
+        console.error(`[SEEDER] Skipped: Seed data file not found at ${chatDataPath}.`);
         return;
     }
+    console.log('[SEEDER] Seed data file found. Reading and parsing...');
     const chatData = JSON.parse(fs.readFileSync(chatDataPath, 'utf-8'));
+    console.log('[SEEDER] Seed data parsed successfully.');
 
     const usersToCreate = [];
     const userMap = {}; // Stores legacyId -> MongoUser object
 
-    // Consolidate user creation logic
+    console.log('[SEEDER] Processing users from seed data...');
     const addUserToProcess = (legacyId, username, avatar) => {
         if (!userMap[legacyId]) {
             usersToCreate.push({ legacyUserId: legacyId, username, avatar });
@@ -50,46 +59,43 @@ const seedDatabase = async () => {
     const uniqueUsersToCreate = usersToCreate.filter((v, i, a) => a.findIndex(t => (t.legacyUserId === v.legacyUserId)) === i);
     
     if (uniqueUsersToCreate.length > 0) {
-      console.log(`Attempting to create ${uniqueUsersToCreate.length} unique users from seed data.`);
+      console.log(`[SEEDER] Attempting to create ${uniqueUsersToCreate.length} unique users.`);
       try {
-        // Insert new users, ignore if they already exist (e.g., due to unique index on legacyUserId or username)
         await User.insertMany(uniqueUsersToCreate, { ordered: false });
+        console.log(`[SEEDER] User.insertMany executed for ${uniqueUsersToCreate.length} users.`);
       } catch (err) {
-        if (err.code === 11000) { // Duplicate key error
-          console.warn('Some users might already exist (duplicate legacyUserId or username during insertMany). This is usually fine if seeding an already partially seeded DB.');
+        if (err.code === 11000) {
+          console.warn('[SEEDER] Warning during User.insertMany: Some users might already exist (duplicate legacyUserId or username). This is usually fine.');
         } else {
-          console.error('Error inserting users during seed:', err);
-          // Decide if to throw or continue
+          console.error('[SEEDER] Error during User.insertMany:', err);
         }
       }
-      // Fetch all users (newly created or pre-existing) that match the legacy IDs
       const existingAndNewUsers = await User.find({ legacyUserId: { $in: uniqueUsersToCreate.map(u => u.legacyUserId) } });
       existingAndNewUsers.forEach(u => {
-          userMap[u.legacyUserId] = u; // Replace temp placeholder with actual user document
+          userMap[u.legacyUserId] = u;
       });
-      console.log(`${Object.values(userMap).filter(u => u && !u.temp).length} Users processed/found after creation attempt.`);
+      console.log(`[SEEDER] ${Object.values(userMap).filter(u => u && !u.temp).length} Users in userMap after creation/fetch attempt.`);
     } else {
-        console.log('No new users to import based on legacy IDs found in seed data.');
+        console.log('[SEEDER] No new users to import from seed data.');
     }
 
-
+    console.log('[SEEDER] Processing conversations from seed data...');
     const conversationsToCreate = [];
-    const convMap = {}; // Stores legacyConvId -> MongoConversation object
+    const convMap = {}; 
 
     for (const convData of chatData.conversations) {
       const participantMongoIds = convData.participants
-        .map(p => userMap[p.userId]?._id) // Use the populated userMap
-        .filter(id => id); // Filter out undefined if a user wasn't found/created
+        .map(p => userMap[p.userId]?._id) 
+        .filter(id => id); 
 
       if (participantMongoIds.length !== convData.participants.length) {
-        console.warn(`Legacy Conversation ${convData.id}: Not all participants were mapped. Mapped ${participantMongoIds.length}/${convData.participants.length}.`);
-        // Decide if conversation is still valid (e.g., requires at least 2 participants)
+        console.warn(`[SEEDER] Legacy Conversation ${convData.id}: Not all participants were mapped. Mapped ${participantMongoIds.length}/${convData.participants.length}.`);
         if (convData.participants.length >= 2 && participantMongoIds.length < 2) {
-            console.error(`Skipping legacy conversation ${convData.id} due to insufficient mapped participants for a viable chat.`);
+            console.error(`[SEEDER] Skipping legacy conversation ${convData.id} due to insufficient mapped participants.`);
             continue;
         }
          if (participantMongoIds.length === 0 && convData.participants.length > 0) {
-            console.error(`Skipping legacy conversation ${convData.id} as NO participants could be mapped.`);
+            console.error(`[SEEDER] Skipping legacy conversation ${convData.id} as NO participants could be mapped.`);
             continue;
         }
       }
@@ -97,45 +103,44 @@ const seedDatabase = async () => {
       conversationsToCreate.push({
         legacyConvId: convData.id,
         participants: participantMongoIds,
-        // Assuming title is not in chat_data.json for conversations, if it is, add it here.
-        // title: convData.title || `Conversation with ${convData.participants.map(p=>p.user).join(', ')}`,
         lastMessageText: convData.lastMessage,
         lastMessageTimestamp: convData.timestamp ? new Date(convData.timestamp) : new Date(),
-        // createdBy: participantMongoIds[0] // Or decide a convention if needed
       });
     }
     
     if (conversationsToCreate.length > 0) {
-      console.log(`Attempting to create ${conversationsToCreate.length} conversations.`);
+      console.log(`[SEEDER] Attempting to create ${conversationsToCreate.length} conversations.`);
       try {
         await Conversation.insertMany(conversationsToCreate, { ordered: false });
+        console.log(`[SEEDER] Conversation.insertMany executed for ${conversationsToCreate.length} conversations.`);
       } catch (err) {
         if (err.code === 11000) {
-          console.warn('Some conversations might already exist (duplicate legacyConvId during insertMany).');
+          console.warn('[SEEDER] Warning during Conversation.insertMany: Some conversations might already exist.');
         } else {
-          console.error('Error inserting conversations during seed:', err);
+          console.error('[SEEDER] Error during Conversation.insertMany:', err);
         }
       }
       const existingAndNewConversations = await Conversation.find({ legacyConvId: { $in: conversationsToCreate.map(c => c.legacyConvId) } });
       existingAndNewConversations.forEach(c => {
           convMap[c.legacyConvId] = c;
       });
-      console.log(`${Object.values(convMap).length} Conversations processed/found after creation attempt.`);
+      console.log(`[SEEDER] ${Object.values(convMap).length} Conversations in convMap after creation/fetch attempt.`);
     } else {
-      console.log('No new conversations to import from seed data.');
+      console.log('[SEEDER] No new conversations to import from seed data.');
     }
 
+    console.log('[SEEDER] Processing messages from seed data...');
     const messagesToCreate = [];
     for (const msgData of chatData.messages) {
       const conversationMongoId = convMap[msgData.conversationId]?._id;
       const senderMongoId = userMap[msgData.userId]?._id;
 
       if (!conversationMongoId) {
-        console.warn(`Message for legacyConvId ${msgData.conversationId} (content: "${String(msgData.message).substring(0,20)}...") skipped: Conversation not found in convMap.`);
+        console.warn(`[SEEDER] Message for legacyConvId ${msgData.conversationId} (content: "${String(msgData.message).substring(0,20)}...") skipped: Conv not found in convMap.`);
         continue;
       }
       if (!senderMongoId) {
-        console.warn(`Message by legacyUserId ${msgData.userId} (user: "${msgData.user}", content: "${String(msgData.message).substring(0,20)}...") skipped: User not found in userMap.`);
+        console.warn(`[SEEDER] Message by legacyUserId ${msgData.userId} (user: "${msgData.user}", content: "${String(msgData.message).substring(0,20)}...") skipped: User not found in userMap.`);
         continue;
       }
 
@@ -144,7 +149,7 @@ const seedDatabase = async () => {
         legacyConvId: msgData.conversationId,
         senderId: senderMongoId,
         legacySenderId: msgData.userId,
-        type: msgData.messageType === 'text' ? 'text' : (msgData.messageType === 'image' ? 'image' : 'text'), // Basic mapping
+        type: msgData.messageType === 'text' ? 'text' : (msgData.messageType === 'image' ? 'image' : 'text'),
         content: msgData.message,
         reactions: msgData.reactions || {},
         createdAt: msgData.timestamp ? new Date(msgData.timestamp) : new Date(),
@@ -152,25 +157,22 @@ const seedDatabase = async () => {
     }
 
     if (messagesToCreate.length > 0) {
-      console.log(`Attempting to insert ${messagesToCreate.length} messages.`);
+      console.log(`[SEEDER] Attempting to insert ${messagesToCreate.length} messages.`);
       try {
-        // Consider if messages need an idempotency check or if duplicates are okay/unlikely
         await Message.insertMany(messagesToCreate, { ordered: false });
-        console.log(`${messagesToCreate.length} Messages were processed for insertion.`);
+        console.log(`[SEEDER] ${messagesToCreate.length} Messages were processed for insertion by Message.insertMany.`);
       } catch (err) {
-        // Message insertion errors might be less critical to halt on, or could indicate issues.
-        // Duplicate errors (11000) are less likely for messages unless they have a unique index beyond _id.
-        console.error('Error inserting messages during seed:', err.message, '(some messages may not have been inserted)');
+        console.error('[SEEDER] Error inserting messages during seed Message.insertMany:', err.message);
       }
     } else {
-      console.log('No messages to import from seed data.');
+      console.log('[SEEDER] No messages to import from seed data.');
     }
 
-    console.log('Database seeding process completed.');
+    console.log('[SEEDER] Database seeding process finished.');
 
   } catch (error) {
-    console.error('Error during database seeding process:', error);
-    // Do not exit process(1) here, let the application continue or handle it in server.js
+    console.error('[SEEDER] CRITICAL ERROR during database seeding process:', error);
+    console.error(error.stack); // Print stack trace for more details
   }
 };
 
