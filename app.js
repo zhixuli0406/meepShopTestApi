@@ -4,6 +4,11 @@ const cors = require('cors');
 const morgan = require('morgan');
 const config = require('./config');
 
+// Swagger
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const swaggerOptions = require('./config/swaggerOptions');
+
 // Import routes
 const authRoutes = require('./src/routes/auth.routes');
 const conversationRoutes = require('./src/routes/conversation.routes');
@@ -11,6 +16,10 @@ const messageRoutes = require('./src/routes/message.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
 
 const app = express();
+
+// Swagger UI setup
+const swaggerSpecs = swaggerJsdoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 app.use(cors()); 
 app.use(express.json()); 

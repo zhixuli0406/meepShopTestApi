@@ -1,0 +1,1023 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "MeepShop Chat API",
+    "version": "1.0.0",
+    "description": "\nAPI documentation for the MeepShop Chat Application.\nThe application uses both RESTful APIs for managing users, conversations, and messages, \nand WebSockets for real-time communication.\n\n**WebSocket Communication:**\n*   **Connection URL:** Connect to the root WebSocket endpoint (e.g., ws://localhost:3000 or wss://yourdomain.com).\n*   **Handshake Query Parameter:**\n    *   'userId': (string, required) The ID of the authenticated user. This is used to associate the socket connection with the user.\n        Example: 'io({ query: { userId: \"your_user_id_here\" } })'\n*   **Key Client-to-Server Events (Emitted by Client):**\n    *   'joinConversation':\n        *   Payload: '(conversationId: string)'\n        *   Description: Client requests to join a specific conversation room to receive messages for that conversation.\n    *   'leaveConversation':\n        *   Payload: '(conversationId: string)'\n        *   Description: Client requests to leave a specific conversation room.\n    *   'sendMessage':\n        *   Payload: '({ conversationId: string, type: \"text\" | \"image\", content: string })'\n        *   Description: Client sends a new message to a conversation. For image messages, 'content' should be the public URL of the uploaded image.\n        *   Callback: '(response: { status: \"success\" | \"error\", data?: object, message?: string })'\n    *   'typing':\n        *   Payload: '({ conversationId: string, isTyping: boolean })'\n        *   Description: Client indicates they are typing or have stopped typing in a conversation.\n*   **Key Server-to-Client Events (Emitted by Server, Listened to by Client):**\n    *   'connected':\n        *   Payload: '({ message: string })'\n        *   Description: Server confirms successful WebSocket connection and authentication.\n    *   'newMessage':\n        *   Payload: '(MessageObject)' (The full message object, populated with sender details)\n        *   Description: Server broadcasts a new message to all participants in a conversation room.\n    *   'updateConversationList':\n        *   Payload: '({ conversationId: string, lastMessage: MessageObject })'\n        *   Description: Server notifies clients (in their user-specific room) that a conversation they are part of has a new message, allowing UI to update conversation list previews.\n    *   'userTyping':\n        *   Payload: '({ conversationId: string, userId: string, username: string, isTyping: boolean })'\n        *   Description: Server broadcasts typing status of a user to other participants in a conversation room.\n    *   'error': \n        *   Payload: '({ message: string })'\n        *   Description: Server emits an error message to the client (e.g., authentication failure during WebSocket connection).\n",
+    "contact": {
+      "name": "API Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "error"
+          },
+          "message": {
+            "type": "string"
+          },
+          "stack": {
+            "type": "string",
+            "description": "Stack trace (only in development)"
+          }
+        }
+      },
+      "UserInput": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "john_doe"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123",
+            "format": "password"
+          },
+          "passwordConfirm": {
+            "type": "string",
+            "example": "password123",
+            "format": "password"
+          },
+          "avatar": {
+            "type": "string",
+            "example": "https://example.com/avatar.jpg",
+            "nullable": true
+          },
+          "legacyUserId": {
+            "type": "integer",
+            "example": 101,
+            "nullable": true,
+            "description": "Legacy user ID from chat_data.json, if applicable"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "passwordConfirm"
+        ]
+      },
+      "UserLoginInput": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "john_doe"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123",
+            "format": "password"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109ca"
+          },
+          "username": {
+            "type": "string",
+            "example": "john_doe"
+          },
+          "avatar": {
+            "type": "string",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "legacyUserId": {
+            "type": "integer",
+            "example": 101,
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "success"
+          },
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "$ref": "#/components/schemas/UserResponse"
+              }
+            }
+          }
+        }
+      },
+      "ConversationInput": {
+        "type": "object",
+        "properties": {
+          "participantIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "60d0fe4f5311236168a109cb",
+              "60d0fe4f5311236168a109cc"
+            ],
+            "description": "Array of MongoDB User IDs for participants. The creator is implicitly added."
+          },
+          "title": {
+            "type": "string",
+            "example": "Project Discussion",
+            "nullable": true,
+            "description": "Optional title for group conversations."
+          }
+        },
+        "required": [
+          "participantIds"
+        ]
+      },
+      "MessageAuthor": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109ca"
+          },
+          "username": {
+            "type": "string",
+            "example": "john_doe"
+          },
+          "avatar": {
+            "type": "string",
+            "example": "https://example.com/avatar.jpg"
+          },
+          "legacyUserId": {
+            "type": "integer",
+            "example": 101,
+            "nullable": true
+          }
+        }
+      },
+      "Reaction": {
+        "type": "object",
+        "description": "Key-value pairs of reaction emoji and count.",
+        "additionalProperties": {
+          "type": "integer",
+          "example": 1
+        },
+        "example": {
+          "👍": 2,
+          "❤️": 1
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109cd"
+          },
+          "conversationId": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109ce"
+          },
+          "senderId": {
+            "$ref": "#/components/schemas/MessageAuthor"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image"
+            ],
+            "example": "text"
+          },
+          "content": {
+            "type": "string",
+            "example": "Hello world!"
+          },
+          "reactions": {
+            "$ref": "#/components/schemas/Reaction"
+          },
+          "legacyConvId": {
+            "type": "integer",
+            "example": 1,
+            "nullable": true
+          },
+          "legacySenderId": {
+            "type": "integer",
+            "example": 101,
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConversationResponse": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "60d0fe4f5311236168a109ce"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageAuthor"
+            }
+          },
+          "title": {
+            "type": "string",
+            "example": "Project Discussion",
+            "nullable": true
+          },
+          "lastMessage": {
+            "$ref": "#/components/schemas/MessageResponse",
+            "nullable": true
+          },
+          "lastMessageText": {
+            "type": "string",
+            "example": "See you tomorrow!",
+            "nullable": true
+          },
+          "lastMessageTimestamp": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "legacyConvId": {
+            "type": "integer",
+            "example": 1,
+            "nullable": true
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/MessageAuthor",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateMessageInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image"
+            ],
+            "example": "text"
+          },
+          "content": {
+            "type": "string",
+            "example": "This is a test message. For image type, this will be the S3 URL."
+          }
+        },
+        "required": [
+          "type",
+          "content"
+        ]
+      },
+      "PresignedUrlResponse": {
+        "type": "object",
+        "properties": {
+          "presignedUrl": {
+            "type": "string",
+            "example": "https://s3.amazonaws.com/bucket/..."
+          },
+          "fileKey": {
+            "type": "string",
+            "example": "user-uploads/userId/uuid.jpg"
+          },
+          "publicUrl": {
+            "type": "string",
+            "example": "https://bucket.s3.region.amazonaws.com/user-uploads/userId/uuid.jpg"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., passwords do not match, username already exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Log in an existing user",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User logged in successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing username or password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (e.g., incorrect username or password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Get the currently authenticated user's profile",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "$ref": "#/components/schemas/UserResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (e.g., token missing or invalid)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "post": {
+        "summary": "Create a new conversation",
+        "tags": [
+          "Conversations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conversation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "conversation": {
+                          "$ref": "#/components/schemas/ConversationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing participantIds)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get all conversations for the authenticated user",
+        "tags": [
+          "Conversations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "results": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "conversations": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ConversationResponse"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}": {
+      "get": {
+        "summary": "Get a specific conversation by its ID",
+        "tags": [
+          "Conversations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the conversation to retrieve"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversation details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "conversation": {
+                          "$ref": "#/components/schemas/ConversationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (user not part of conversation or not logged in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conversationId}/messages": {
+      "post": {
+        "summary": "Create a new message in a specific conversation",
+        "tags": [
+          "Conversations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the conversation where the message will be posted"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMessageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "$ref": "#/components/schemas/MessageResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing type or content)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (user not part of conversation or not logged in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages": {
+      "get": {
+        "summary": "Get messages for a specific conversation with pagination",
+        "tags": [
+          "Messages"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "conversationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the conversation to fetch messages for."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Page number for pagination."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Number of messages per page."
+          },
+          {
+            "in": "query",
+            "name": "sortBy",
+            "schema": {
+              "type": "string",
+              "default": "createdAt:asc"
+            },
+            "description": "Sort order for messages (e.g., 'createdAt:asc' or 'createdAt:desc')."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "messages": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MessageResponse"
+                          }
+                        },
+                        "currentPage": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "totalPages": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "totalMessages": {
+                          "type": "integer",
+                          "example": 150
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing conversationId)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized (user not part of conversation or not logged in)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Conversation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/presigned-url": {
+      "get": {
+        "summary": "Generate a presigned URL for uploading a file to AWS S3",
+        "tags": [
+          "Upload"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "fileName",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The original name of the file (e.g., 'my-image.jpg')."
+          },
+          {
+            "in": "query",
+            "name": "fileType",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The MIME type of the file (e.g., 'image/jpeg', 'image/png')."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully generated presigned URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PresignedUrlResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing fileName or fileType)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error (e.g., S3 bucket not configured, error generating URL)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User registration and login"
+    },
+    {
+      "name": "Conversations",
+      "description": "Managing user conversations and messages within them"
+    },
+    {
+      "name": "Messages",
+      "description": "Retrieving messages for a conversation"
+    },
+    {
+      "name": "Upload",
+      "description": "File upload utilities, such as generating presigned URLs for S3"
+    }
+  ]
+}
