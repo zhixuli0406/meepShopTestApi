@@ -153,7 +153,7 @@
 │   ├── index.js              # 環境變數載入與匯出
 │   └── swaggerOptions.js     # Swagger JSDoc 設定
 ├── public/                   # 靜態檔案 (若有)
-├── scripts/                  # 腳本 (目前已將匯入邏輯移至 seedDatabase.js)
+├── scripts/                  # 輔助腳本 (例如 Swagger JSON 產生)。資料匯入邏輯已移至 src/utils/seedDatabase.js
 ├── src/                      # 原始碼目錄
 │   ├── controllers/          # 控制器 (處理 HTTP 請求)
 │   ├── middlewares/          # Express 中介軟體
