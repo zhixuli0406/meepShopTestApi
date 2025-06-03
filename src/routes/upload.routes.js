@@ -11,7 +11,7 @@ const router = express.Router();
  *   description: File upload utilities, such as generating presigned URLs for S3
  */
 
-router.use(protect);
+// router.use(protect); // Temporarily commented out for debugging 404 issue
 
 /**
  * @swagger

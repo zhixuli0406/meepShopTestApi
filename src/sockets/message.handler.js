@@ -5,7 +5,7 @@ const conversationService = require('../services/conversation.service');
 module.exports = (io, socket, onlineUsers) => {
   const sendMessage = async (data, callback) => {
     try {
-      const { conversationId, type, content } = data;
+      const { conversationId, type, content, s3_key } = data;
       const senderId = socket.user?._id; // Get senderId from the authenticated socket.user
 
       if (!senderId) {
@@ -17,6 +17,10 @@ module.exports = (io, socket, onlineUsers) => {
         if (callback) callback({ status: 'error', message: 'Missing conversationId, type, or content.' });
         return;
       }
+      if (type === 'image' && !s3_key) {
+        if (callback) callback({ status: 'error', message: 'Missing s3_key for image message.' });
+        return;
+      }
 
       const conversation = await conversationService.getConversationById(conversationId, senderId);
       if (!conversation) {
@@ -24,7 +28,16 @@ module.exports = (io, socket, onlineUsers) => {
           return;
       }
 
-      const messageData = { conversationId, senderId, type, content };
+      const messageData = { 
+        conversationId, 
+        senderId, 
+        type, 
+        content,
+        s3_key: type === 'image' ? s3_key : undefined,
+      };
+
+      Object.keys(messageData).forEach(key => messageData[key] === undefined && delete messageData[key]);
+
       const newMessage = await messageService.createMessage(messageData);
 
       io.to(conversationId.toString()).emit('newMessage', newMessage);

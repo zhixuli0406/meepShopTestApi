@@ -6,11 +6,15 @@ const AppError = require('../utils/appError');
 
 exports.createMessage = catchAsync(async (req, res, next) => {
   const { conversationId } = req.params;
-  const { type, content } = req.body;
+  const { type, content, s3_key } = req.body;
   const currentUser = req.user;
 
   if (!type || !content) {
     return next(new AppError('Message type and content are required.', 400));
+  }
+
+  if (type === 'image' && !s3_key) {
+    return next(new AppError('s3_key is required for image messages.', 400));
   }
 
   let conversation = await Conversation.findById(conversationId).populate('participants', 'username avatar _id legacyUserId');
@@ -46,8 +50,12 @@ exports.createMessage = catchAsync(async (req, res, next) => {
     conversationId, 
     senderId: currentUser.id, 
     type, 
-    content 
+    content,
+    s3_key: type === 'image' ? s3_key : undefined,
   };
+
+  Object.keys(userMessageData).forEach(key => userMessageData[key] === undefined && delete userMessageData[key]);
+
   const userMessageInstance = await messageService.createMessage(userMessageData);
 
   if (io && userMessageInstance) {

@@ -3,22 +3,39 @@ const ConversationService = require('./conversation.service');
 const AppError = require('../utils/appError');
 
 exports.createMessage = async (messageData) => {
-  const { conversationId, senderId, type, content, legacyConvId, legacySenderId, reactions, timestamp } = messageData;
+  const { conversationId, senderId, type, content, s3_key, legacyConvId, legacySenderId, reactions, timestamp } = messageData;
 
   if (!conversationId || !senderId || !type || !content) {
     throw new AppError('Missing required message fields (conversationId, senderId, type, content).', 400);
   }
+  if (type === 'image' && !s3_key) {
+    throw new AppError('Missing s3_key for image message.', 400);
+  }
 
-  const message = await Message.create({
+  let imageUrl = null;
+  if (type === 'image' && s3_key) {
+    // IMPORTANT: Replace with your actual S3 public URL prefix from environment variables or config
+    const s3PublicUrlPrefix = process.env.S3_PUBLIC_URL_PREFIX || 'https://your-s3-bucket-url-prefix.com'; 
+    imageUrl = `${s3PublicUrlPrefix}/${s3_key}`;
+  }
+
+  const messageObject = {
     conversationId,
     senderId,
     type,
     content,
+    s3_key: type === 'image' ? s3_key : undefined,
+    imageUrl: type === 'image' ? imageUrl : undefined,
     legacyConvId,     
     legacySenderId,   
     reactions,        
     createdAt: timestamp ? new Date(timestamp) : new Date(), 
-  });
+  };
+
+  // Remove undefined keys to avoid storing them in MongoDB
+  Object.keys(messageObject).forEach(key => messageObject[key] === undefined && delete messageObject[key]);
+
+  const message = await Message.create(messageObject);
 
   const populatedMessage = await Message.findById(message._id)
     .populate({ path: 'senderId', select: 'username avatar legacyUserId _id' });

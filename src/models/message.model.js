@@ -37,6 +37,14 @@ const messageSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  s3_key: {
+    type: String,
+    trim: true,
+  },
+  imageUrl: {
+    type: String,
+    trim: true,
+  },
   reactions: { 
     type: reactionSchema,
     default: () => ({}),
