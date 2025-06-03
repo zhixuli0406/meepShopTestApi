@@ -196,5 +196,3 @@
     -   設定 EC2 安全性群組 (Security Groups) 以限制入站流量 (例如，只允許 HTTP/HTTPS 及 SSH)。
     -   使用反向代理 (例如 Nginx) 來處理傳入請求、負載平衡 (若有多實例) 及提供 SSL/TLS 終止。
     -   設定 HTTPS (例如使用 Let's Encrypt 免費憑證)。
--   **日誌管理**: 設定日誌輪替及集中式日誌收集 (例如 CloudWatch Logs)。
--   **監控與備份**: 設定監控警報 (例如 CloudWatch Alarms) 及資料庫備份策略。 
