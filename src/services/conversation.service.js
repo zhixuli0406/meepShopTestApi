@@ -96,8 +96,13 @@ exports.createConversation = async (userId, participantIds, title) => {
       console.log(`[Service:createConversation] Creating system message for new conversation ${populatedConversation._id}: "${systemMessageContent}"`);
       initialSystemMessage = await messageService.createSystemMessage(populatedConversation._id, systemMessageContent);
       console.log(`[Service:createConversation] System message created with ID: ${initialSystemMessage._id}`);
+      // Update conversation's last message with this system message
+      if (initialSystemMessage) {
+        await exports.updateConversationLastMessage(populatedConversation._id, initialSystemMessage);
+        console.log(`[Service:createConversation] Updated last message for conversation ${populatedConversation._id} with the system message.`);
+      }
     } catch (error) {
-      console.error(`[Service:createConversation] Failed to create initial system message for conversation ${populatedConversation._id}:`, error);
+      console.error(`[Service:createConversation] Failed to create or set initial system message for conversation ${populatedConversation._id}:`, error);
       // Do not throw an error if system message creation fails; main conversation creation is still successful.
     }
   }
@@ -194,8 +199,17 @@ exports.findOrCreateConversationFromLegacy = async (legacyConvData, userMap) => 
 };
 
 exports.updateConversationLastMessage = async (conversationId, message) => {
+    let lastMessageTextContent;
+    if (message.type === 'text' || message.type === 'system') {
+        lastMessageTextContent = message.content;
+    } else if (message.type === 'image') {
+        lastMessageTextContent = '[Image]';
+    } else {
+        lastMessageTextContent = '[Message]'; // Fallback for other types
+    }
+
     await Conversation.findByIdAndUpdate(conversationId, {
-        lastMessageText: message.type === 'text' ? message.content : (message.type === 'image' ? '[Image]' : '[Message]'),
+        lastMessageText: lastMessageTextContent,
         lastMessageTimestamp: message.createdAt,
     });
 }; 
