@@ -14,9 +14,16 @@ exports.createMessage = async (messageData) => {
 
   let imageUrl = null;
   if (type === 'image' && s3_key) {
-    // IMPORTANT: Replace with your actual S3 public URL prefix from environment variables or config
-    const s3PublicUrlPrefix = process.env.S3_PUBLIC_URL_PREFIX || 'https://your-s3-bucket-url-prefix.com'; 
-    imageUrl = `${s3PublicUrlPrefix}/${s3_key}`;
+    const region = process.env.AWS_REGION;
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+    if (!region || !bucketName) {
+      console.error('AWS_REGION or AWS_S3_BUCKET_NAME environment variables are not set.');
+      // Optionally, throw an error or handle it as per your application's requirements
+      // For now, it will result in imageUrl being null if these are not set.
+    } else {
+      imageUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${s3_key}`;
+    }
   }
 
   const messageObject = {
