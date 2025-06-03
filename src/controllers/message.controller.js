@@ -96,4 +96,42 @@ exports.getMessages = catchAsync(async (req, res, next) => {
     status: 'success',
     data: result,
   });
+});
+
+exports.reactToMessage = catchAsync(async (req, res, next) => {
+  const { messageId } = req.params;
+  const { reactionType, action } = req.body;
+  const userId = req.user.id; // Assuming user is authenticated via `protect` middleware
+
+  if (!reactionType || !action) {
+    return next(new AppError('Reaction type and action are required.', 400));
+  }
+
+  const updatedMessageReactions = await messageService.updateMessageReaction(
+    messageId,
+    userId,
+    reactionType,
+    action
+  );
+
+  // Emit socket event to the conversation room
+  const io = req.app.get('socketio');
+  if (io && updatedMessageReactions && updatedMessageReactions.conversationId) {
+    io.to(updatedMessageReactions.conversationId.toString()).emit('messageReactionUpdated', {
+      messageId: updatedMessageReactions._id,
+      reactions: updatedMessageReactions.reactions,
+    });
+  } else if (!io) {
+    console.warn("Socket.IO instance not available in message controller for reaction update.");
+  } else if (!updatedMessageReactions || !updatedMessageReactions.conversationId) {
+    console.warn("Failed to get conversationId from updatedMessageReactions for socket emission.");
+  }
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      messageId: updatedMessageReactions._id,
+      reactions: updatedMessageReactions.reactions,
+    },
+  });
 }); 

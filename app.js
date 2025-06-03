@@ -12,7 +12,7 @@ const swaggerOptions = require('./config/swaggerOptions');
 // Import routes
 const authRoutes = require('./src/routes/auth.routes');
 const conversationRoutes = require('./src/routes/conversation.routes');
-// const messageRoutes = require('./src/routes/message.routes'); // Removed
+const messageRoutes = require('./src/routes/message.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
 const userRoutes = require('./src/routes/user.routes');
 
@@ -38,7 +38,7 @@ app.get('/', (req, res) => {
 const apiBasePath = '/api/v1'; // Define a base path for API versioning
 app.use(`${apiBasePath}/auth`, authRoutes);
 app.use(`${apiBasePath}/conversations`, conversationRoutes);
-// app.use(`${apiBasePath}/messages`, messageRoutes); // Removed
+app.use(`${apiBasePath}/messages`, messageRoutes);
 app.use(`${apiBasePath}/upload`, uploadRoutes);
 app.use(`${apiBasePath}/users`, userRoutes);
 
