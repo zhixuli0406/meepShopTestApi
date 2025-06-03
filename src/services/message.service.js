@@ -114,62 +114,53 @@ exports.findOrCreateMessageFromLegacy = async (legacyMsgData, convMap, userMap) 
     return message;
 };
 
-exports.updateMessageReaction = async (messageId, userId, reactionType, action) => {
-  // 1. Fetch message to get conversationId for auth check
-  const messageForAuth = await Message.findById(messageId).select('conversationId').lean();
-  if (!messageForAuth) {
+exports.updateMessageReaction = async (messageId, reactionType, action) => {
+  // 1. Fetch message to get conversationId for socket emission (still needed)
+  //    and to ensure the message exists.
+  const message = await Message.findById(messageId).select('conversationId').lean();
+  if (!message) {
     throw new AppError('Message not found.', 404);
   }
 
-  // 2. Authenticate: Check if user is part of the conversation
-  // This will throw an error if user is not a participant or conversation doesn't exist
-  await ConversationService.getConversationById(messageForAuth.conversationId, userId);
-
-  // 3. Validate reactionType
+  // 2. Validate reactionType
   const allowedReactionTypes = Object.keys(Message.schema.path('reactions').schema.paths);
   if (!allowedReactionTypes.includes(reactionType)) {
     throw new AppError(`Invalid reaction type: ${reactionType}. Allowed types are: ${allowedReactionTypes.join(', ')}.`, 400);
   }
 
-  // 4. Validate action
+  // 3. Validate action
   if (!['increment', 'decrement'].includes(action)) {
     throw new AppError('Invalid action. Must be \'increment\' or \'decrement\'.', 400);
   }
 
   const reactionPath = `reactions.${reactionType}`;
-  let updatedMessage;
+  let updatedMessageReactions;
 
   if (action === 'increment') {
-    updatedMessage = await Message.findByIdAndUpdate(
+    updatedMessageReactions = await Message.findByIdAndUpdate(
       messageId,
       { $inc: { [reactionPath]: 1 } },
-      { new: true, upsert: false, select: '_id reactions conversationId' }
-    ).lean(); // Use lean to get a plain JS object
+      { new: true, upsert: false, select: '_id reactions conversationId' } // Ensure conversationId is selected
+    ).lean(); 
   } else { // action === 'decrement'
-    updatedMessage = await Message.findOneAndUpdate(
-      { _id: messageId, [reactionPath]: { $gt: 0 } }, // Only decrement if current value > 0
+    updatedMessageReactions = await Message.findOneAndUpdate(
+      { _id: messageId, [reactionPath]: { $gt: 0 } }, 
       { $inc: { [reactionPath]: -1 } },
-      { new: true, upsert: false, select: '_id reactions conversationId' }
+      { new: true, upsert: false, select: '_id reactions conversationId' } // Ensure conversationId is selected
     ).lean();
 
-    if (!updatedMessage) {
-      // If update didn't happen (e.g., reaction count was already 0 or message deleted),
-      // fetch the current state to return. If messageForAuth was found, message should still exist.
+    if (!updatedMessageReactions) {
       const currentMessageState = await Message.findById(messageId).select('_id reactions conversationId').lean();
       if (!currentMessageState) {
-        // This is highly unlikely if messageForAuth was found, but as a safeguard
         throw new AppError('Message disappeared during reaction update.', 500);
       }
-      // No actual change in reaction count occurred (was 0), return current state.
       return currentMessageState; 
     }
   }
 
-  if (!updatedMessage) {
-    // Should not be reached if messageForAuth was found and action is increment, 
-    // or if action is decrement and handled above.
+  if (!updatedMessageReactions) {
     throw new AppError('Failed to update message reaction.', 500);
   }
 
-  return updatedMessage;
+  return updatedMessageReactions;
 }; 
