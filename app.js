@@ -39,7 +39,7 @@ const apiBasePath = '/api/v1'; // Define a base path for API versioning
 app.use(`${apiBasePath}/auth`, authRoutes);
 app.use(`${apiBasePath}/conversations`, conversationRoutes);
 app.use(`${apiBasePath}/messages`, messageRoutes);
-app.use(`${apiBasePath}/upload`, uploadRoutes);
+app.use(`${apiBasePath}/uploads`, uploadRoutes);
 app.use(`${apiBasePath}/users`, userRoutes);
 
 app.use((req, res, next) => {
