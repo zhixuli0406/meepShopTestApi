@@ -1,6 +1,7 @@
 const Conversation = require('../models/conversation.model');
 const User = require('../models/user.model');
 const AppError = require('../utils/appError');
+const messageService = require('./message.service');
 
 exports.createConversation = async (userId, participantIds, title) => {
   console.log('[Service:createConversation] Called with:');
@@ -85,8 +86,24 @@ exports.createConversation = async (userId, participantIds, title) => {
   
   console.log('[Service:createConversation] Populating participants for the new conversation...');
   const populatedConversation = await Conversation.findById(newConversation._id).populate('participants', 'username avatar legacyUserId _id');
-  console.log('[Service:createConversation] Returning populated new conversation.');
-  return populatedConversation;
+  
+  let initialSystemMessage = null;
+  if (populatedConversation && populatedConversation.participants && populatedConversation.participants.length > 0) {
+    const participantNames = populatedConversation.participants.map(p => p.username).join(', ');
+    const systemMessageContent = `Users ${participantNames} have joined the conversation.`;
+    
+    try {
+      console.log(`[Service:createConversation] Creating system message for new conversation ${populatedConversation._id}: "${systemMessageContent}"`);
+      initialSystemMessage = await messageService.createSystemMessage(populatedConversation._id, systemMessageContent);
+      console.log(`[Service:createConversation] System message created with ID: ${initialSystemMessage._id}`);
+    } catch (error) {
+      console.error(`[Service:createConversation] Failed to create initial system message for conversation ${populatedConversation._id}:`, error);
+      // Do not throw an error if system message creation fails; main conversation creation is still successful.
+    }
+  }
+
+  console.log('[Service:createConversation] Returning populated new conversation and initial system message.');
+  return { conversation: populatedConversation, systemMessage: initialSystemMessage };
 };
 
 exports.getUserConversations = async (userId) => {
