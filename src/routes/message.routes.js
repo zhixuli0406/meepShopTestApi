@@ -2,7 +2,7 @@
 // This file is now empty as message retrieval is handled under /conversations/:conversationId/messages
 const express = require('express');
 const messageController = require('../controllers/message.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+// const authMiddleware = require('../middlewares/auth.middleware'); // No longer needed for this route
 
 const router = express.Router();
 
@@ -17,10 +17,8 @@ const router = express.Router();
  * @swagger
  * /api/v1/messages/{messageId}/reactions:
  *   post:
- *     summary: Add or remove a reaction to a message.
+ *     summary: Add or remove a reaction to a message. (Public Endpoint)
  *     tags: [Messages]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: messageId
@@ -67,16 +65,12 @@ const router = express.Router();
  *                       $ref: '#/components/schemas/Reactions'
  *       400:
  *         description: Bad request (e.g., missing fields, invalid reactionType or action).
- *       401:
- *         description: Unauthorized (user not logged in).
- *       403:
- *         description: Forbidden (user not part of the conversation).
  *       404:
  *         description: Message not found.
  *       500:
  *         description: Internal server error.
  */
-router.post('/:messageId/reactions', authMiddleware.protect, messageController.reactToMessage);
+router.post('/:messageId/reactions', messageController.reactToMessage); // Removed authMiddleware.protect
 
 // No routes defined here anymore.
 // Swagger JSDoc for /api/v1/messages (GET) has been moved or incorporated into

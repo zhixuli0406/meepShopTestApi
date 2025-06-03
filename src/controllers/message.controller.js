@@ -101,7 +101,7 @@ exports.getMessages = catchAsync(async (req, res, next) => {
 exports.reactToMessage = catchAsync(async (req, res, next) => {
   const { messageId } = req.params;
   const { reactionType, action } = req.body;
-  const userId = req.user.id; // Assuming user is authenticated via `protect` middleware
+  // const userId = req.user.id; // Removed as authentication is being removed
 
   if (!reactionType || !action) {
     return next(new AppError('Reaction type and action are required.', 400));
@@ -109,7 +109,7 @@ exports.reactToMessage = catchAsync(async (req, res, next) => {
 
   const updatedMessageReactions = await messageService.updateMessageReaction(
     messageId,
-    userId,
+    // userId, // Removed
     reactionType,
     action
   );

@@ -99,7 +99,7 @@
         - `sortBy` (string, optional, default: 'createdAt:asc'): 排序欄位與順序，例如 `'createdAt:desc'`。
     - **回應 (Response)**: 包含訊息陣列及分頁資訊的物件。
 - **`POST /messages/:messageId/reactions`**
-    - **功能**: (需認證) 對特定訊息增加或移除一個反應 (reaction)。
+    - **功能**: (公開) 對特定訊息增加或移除一個反應 (reaction)。任何人都可以執行此操作。
     - **路徑參數 (Path Parameters)**: `messageId` (要反應的訊息的 MongoDB ID)。
     - **請求主體 (Request Body)**: `{ "reactionType": "string (e.g., 'like', 'love')", "action": "increment" | "decrement" }`
     - **回應 (Response)**: 更新後的訊息 ID 及 reactions 物件。

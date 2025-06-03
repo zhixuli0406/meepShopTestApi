@@ -989,14 +989,9 @@
     },
     "/api/v1/messages/{messageId}/reactions": {
       "post": {
-        "summary": "Add or remove a reaction to a message.",
+        "summary": "Add or remove a reaction to a message. (Public Endpoint)",
         "tags": [
           "Messages"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
         ],
         "parameters": [
           {
@@ -1069,12 +1064,6 @@
           },
           "400": {
             "description": "Bad request (e.g., missing fields, invalid reactionType or action)."
-          },
-          "401": {
-            "description": "Unauthorized (user not logged in)."
-          },
-          "403": {
-            "description": "Forbidden (user not part of the conversation)."
           },
           "404": {
             "description": "Message not found."
